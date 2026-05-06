@@ -1,0 +1,1 @@
+# Admin for laundry module.

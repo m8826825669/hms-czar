@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.python-version
+
+# Django
+*.log
+db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Env files (NEVER commit)
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Coverage / build
+.coverage
+htmlcov/
+dist/
+build/
+*.tsbuildinfo
+
+# Pytest
+.pytest_cache/
+
+# Docker
+docker-compose.override.yml
