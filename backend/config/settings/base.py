@@ -76,6 +76,7 @@ LOCAL_APPS = [
     # Finance
     "apps.billing",
     "apps.accounting",
+    "apps.public",
     # Cross-cutting
     "apps.scheduling",
     "apps.reports",

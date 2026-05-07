@@ -15,8 +15,9 @@ api_v1_patterns = [
     # Phase 1b
     path("opd/", include("apps.opd.urls")),
     path("emr/", include("apps.emr.urls")),
-    # Phase 1c (next):
-    # path("billing/", include("apps.billing.urls")),
+    # Phase 1c
+    path("billing/", include("apps.billing.urls")),
+    path("public/", include("apps.public.urls")),
 ]
 
 urlpatterns = [

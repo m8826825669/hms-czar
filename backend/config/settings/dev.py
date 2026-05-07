@@ -1,5 +1,6 @@
 """Dev settings."""
 from .base import *  # noqa
+import os
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
@@ -16,3 +17,7 @@ LOGGING["loggers"]["django.db.backends"] = {
 # Run Celery tasks inline in dev (no worker needed)
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
