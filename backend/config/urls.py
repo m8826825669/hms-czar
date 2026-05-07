@@ -8,10 +8,15 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 api_v1_patterns = [
     path("auth/", include("apps.accounts.urls")),
     path("core/", include("apps.core.urls")),
-    # Per-module routes will be enabled phase-by-phase as built.
-    # path("reception/", include("apps.reception.urls")),
+    # Phase 1a
+    path("notifications/", include("apps.notifications.urls")),
+    path("specialist/", include("apps.specialist.urls")),
+    path("reception/", include("apps.reception.urls")),
+    # Phase 1b (next zip):
     # path("opd/", include("apps.opd.urls")),
-    # ... etc
+    # path("emr/", include("apps.emr.urls")),
+    # Phase 1c:
+    # path("billing/", include("apps.billing.urls")),
 ]
 
 urlpatterns = [

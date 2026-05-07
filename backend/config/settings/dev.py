@@ -12,3 +12,7 @@ LOGGING["loggers"]["django.db.backends"] = {
     "handlers": ["console"],
     "level": "INFO",  # change to DEBUG for SQL spam
 }
+
+# Run Celery tasks inline in dev (no worker needed)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

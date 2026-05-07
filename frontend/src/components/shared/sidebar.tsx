@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, UserPlus, Stethoscope, BedDouble, Building2, Activity,
-  FileText, Heart, FlaskConical, Droplet, Pill, Package, Wind, Utensils,
+  FileText, Heart, Droplet, Pill, Package, Wind, Utensils,
   Shirt, Truck, MessageSquare, Users, CalendarCheck, AlertTriangle,
   Shield, Lock, Receipt, Calculator, Calendar, BarChart3, Microscope,
   Settings,
@@ -22,39 +22,39 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Clinical" },
   // Clinical
-  { href: "/reception", label: "Reception", icon: UserPlus, perm: "reception.view", group: "Clinical" },
-  { href: "/opd", label: "OPD", icon: Stethoscope, perm: "opd.view", group: "Clinical" },
-  { href: "/ipd", label: "IPD", icon: BedDouble, perm: "ipd.view", group: "Clinical" },
-  { href: "/ward", label: "Ward", icon: Building2, perm: "ward.view", group: "Clinical" },
-  { href: "/ot", label: "OT", icon: Activity, perm: "ot.view", group: "Clinical" },
-  { href: "/emr", label: "EMR", icon: FileText, perm: "emr.view", group: "Clinical" },
-  { href: "/nursing", label: "Nursing", icon: Heart, perm: "nursing.view", group: "Clinical" },
-  { href: "/specialist", label: "Specialists", icon: Stethoscope, perm: "specialist.view", group: "Clinical" },
-  { href: "/blood-bank", label: "Blood Bank", icon: Droplet, perm: "bloodbank.view", group: "Clinical" },
-  { href: "/research", label: "Research", icon: Microscope, perm: "research.view", group: "Clinical" },
+  { href: "/dashboard/reception", label: "Reception", icon: UserPlus, perm: "reception.view", group: "Clinical" },
+  { href: "/dashboard/opd", label: "OPD", icon: Stethoscope, perm: "opd.view", group: "Clinical" },
+  { href: "/dashboard/ipd", label: "IPD", icon: BedDouble, perm: "ipd.view", group: "Clinical" },
+  { href: "/dashboard/ward", label: "Ward", icon: Building2, perm: "ward.view", group: "Clinical" },
+  { href: "/dashboard/ot", label: "OT", icon: Activity, perm: "ot.view", group: "Clinical" },
+  { href: "/dashboard/emr", label: "EMR", icon: FileText, perm: "emr.view", group: "Clinical" },
+  { href: "/dashboard/nursing", label: "Nursing", icon: Heart, perm: "nursing.view", group: "Clinical" },
+  { href: "/dashboard/specialist", label: "Specialists", icon: Stethoscope, perm: "specialist.view", group: "Clinical" },
+  { href: "/dashboard/blood-bank", label: "Blood Bank", icon: Droplet, perm: "bloodbank.view", group: "Clinical" },
+  { href: "/dashboard/research", label: "Research", icon: Microscope, perm: "research.view", group: "Clinical" },
   // Pharmacy
-  { href: "/pharmacy", label: "Pharmacy", icon: Pill, perm: "pharmacy.view", group: "Pharmacy" },
-  { href: "/stock", label: "Stock & Purchase", icon: Package, perm: "stock.view", group: "Pharmacy" },
-  { href: "/bottles", label: "Bottles (O₂ / IV)", icon: Wind, perm: "bottles.view", group: "Pharmacy" },
+  { href: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill, perm: "pharmacy.view", group: "Pharmacy" },
+  { href: "/dashboard/stock", label: "Stock & Purchase", icon: Package, perm: "stock.view", group: "Pharmacy" },
+  { href: "/dashboard/bottles", label: "Bottles (O₂ / IV)", icon: Wind, perm: "bottles.view", group: "Pharmacy" },
   // Support
-  { href: "/dietary", label: "Dietary", icon: Utensils, perm: "dietary.view", group: "Support" },
-  { href: "/laundry", label: "Laundry", icon: Shirt, perm: "laundry.view", group: "Support" },
-  { href: "/ambulance", label: "Ambulance", icon: Truck, perm: "ambulance.view", group: "Support" },
-  { href: "/comms", label: "Internal Comms", icon: MessageSquare, perm: "comms.view", group: "Support" },
+  { href: "/dashboard/dietary", label: "Dietary", icon: Utensils, perm: "dietary.view", group: "Support" },
+  { href: "/dashboard/laundry", label: "Laundry", icon: Shirt, perm: "laundry.view", group: "Support" },
+  { href: "/dashboard/ambulance", label: "Ambulance", icon: Truck, perm: "ambulance.view", group: "Support" },
+  { href: "/dashboard/comms", label: "Internal Comms", icon: MessageSquare, perm: "comms.view", group: "Support" },
   // HR
-  { href: "/staff", label: "Staff & HR", icon: Users, perm: "staff.view", group: "HR" },
-  { href: "/attendance", label: "Leave & Attendance", icon: CalendarCheck, perm: "attendance.view", group: "HR" },
+  { href: "/dashboard/staff", label: "Staff & HR", icon: Users, perm: "staff.view", group: "HR" },
+  { href: "/dashboard/attendance", label: "Leave & Attendance", icon: CalendarCheck, perm: "attendance.view", group: "HR" },
   // Security
-  { href: "/crisis", label: "Crisis", icon: AlertTriangle, perm: "crisis.view", group: "Security" },
-  { href: "/protection", label: "Protection", icon: Shield, perm: "protection.view", group: "Security" },
-  { href: "/admin-security", label: "Access Control", icon: Lock, perm: "adminsec.view", group: "Security" },
+  { href: "/dashboard/crisis", label: "Crisis", icon: AlertTriangle, perm: "crisis.view", group: "Security" },
+  { href: "/dashboard/protection", label: "Protection", icon: Shield, perm: "protection.view", group: "Security" },
+  { href: "/dashboard/admin-security", label: "Access Control", icon: Lock, perm: "adminsec.view", group: "Security" },
   // Finance
-  { href: "/billing", label: "Billing", icon: Receipt, perm: "billing.view", group: "Finance" },
-  { href: "/accounting", label: "Accounting", icon: Calculator, perm: "accounting.view", group: "Finance" },
+  { href: "/dashboard/billing", label: "Billing", icon: Receipt, perm: "billing.view", group: "Finance" },
+  { href: "/dashboard/accounting", label: "Accounting", icon: Calculator, perm: "accounting.view", group: "Finance" },
   // Cross-cutting
-  { href: "/scheduling", label: "Scheduling", icon: Calendar, perm: "scheduling.view", group: "Cross" },
-  { href: "/reports", label: "MIS Reports", icon: BarChart3, perm: "reports.view", group: "Cross" },
-  { href: "/settings", label: "Settings", icon: Settings, group: "Cross" },
+  { href: "/dashboard/scheduling", label: "Scheduling", icon: Calendar, perm: "scheduling.view", group: "Cross" },
+  { href: "/dashboard/reports", label: "MIS Reports", icon: BarChart3, perm: "reports.view", group: "Cross" },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, group: "Cross" },
 ];
 
 export function Sidebar() {
@@ -95,9 +95,11 @@ export function Sidebar() {
               <ul className="space-y-0.5">
                 {groups[g].map((item) => {
                   const Icon = item.icon;
+                  // Active when exact match, or when pathname starts with the href + "/"
+                  // The "/" guard prevents `/dashboard` matching `/dashboard/reception`
                   const active =
                     pathname === item.href ||
-                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
                   return (
                     <li key={item.href}>
                       <Link
