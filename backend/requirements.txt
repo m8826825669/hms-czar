@@ -27,7 +27,7 @@ django-celery-results==2.5.1
 
 # Storage & Files
 django-storages[s3]==1.14.4
-Pillow==11.0.0
+Pillow==10.4.0
 
 # History / Audit
 django-simple-history==3.7.0

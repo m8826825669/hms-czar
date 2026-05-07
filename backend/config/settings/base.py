@@ -122,9 +122,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": env("POSTGRES_DB", default="hms"),
-        "USER": env("POSTGRES_USER", default="hms"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="hms"),
-        "HOST": env("POSTGRES_HOST", default="db"),
+        "USER": env("POSTGRES_USER", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="12345678"),
+        "HOST": env("POSTGRES_HOST", default="localhost"),
         "PORT": env("POSTGRES_PORT", default="5432"),
         "CONN_MAX_AGE": 60,
         "OPTIONS": {
@@ -134,7 +134,7 @@ DATABASES = {
 }
 
 # ─── Cache (Redis) ──────────────────────────────────────────
-REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
