@@ -1,4 +1,4 @@
-"""Reception module views."""
+"""Reception module views - Phase 1b adds WebSocket broadcasts on queue events."""
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db import transaction
@@ -11,6 +11,14 @@ from apps.core.views import TenantScopedViewSetMixin
 from apps.notifications.tasks import send_template_notification
 from .models import Appointment, QueueToken, VisitorPass
 from .serializers import AppointmentSerializer, QueueTokenSerializer, VisitorPassSerializer
+
+# Phase 1b: WebSocket broadcasts for queue events
+try:
+    from apps.opd.consumers import broadcast_queue_event
+except ImportError:
+    # During migration / before opd app is wired up
+    def broadcast_queue_event(*, hospital_id, payload, doctor_id=None):
+        pass
 
 
 class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
@@ -33,7 +41,6 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             created_by=request.user,
             code=code,
         )
-        # Async appointment confirmation SMS
         if appt.patient.phone:
             send_template_notification.delay(
                 code="APPOINTMENT_BOOKED",
@@ -53,7 +60,6 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def today(self, request):
-        """List today's appointments, optionally filtered by doctor."""
         today = timezone.localdate()
         qs = self.get_queryset().filter(scheduled_date=today)
         if doctor_id := request.query_params.get("doctor"):
@@ -64,7 +70,6 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="check-in")
     def check_in(self, request, pk=None):
-        """Mark appointment as checked-in and auto-issue queue token."""
         appt = self.get_object()
         if appt.status not in ("BOOKED", "CONFIRMED"):
             return Response(
@@ -75,7 +80,6 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             appt.status = "CHECKED_IN"
             appt.checked_in_at = timezone.now()
             appt.save(update_fields=["status", "checked_in_at"])
-            # Generate queue token
             today = timezone.localdate()
             token_no = QueueToken.generate_token(
                 request.hospital, appt.doctor, today, "APPOINTMENT"
@@ -92,6 +96,12 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                 status="WAITING",
                 created_by=request.user,
             )
+        # Broadcast new token to live queue subscribers
+        broadcast_queue_event(
+            hospital_id=request.hospital.id,
+            payload={"type": "TOKEN_CREATED", "token": QueueTokenSerializer(qt).data},
+            doctor_id=qt.doctor_id,
+        )
         return Response({
             "appointment": AppointmentSerializer(appt).data,
             "queue_token": QueueTokenSerializer(qt).data,
@@ -127,16 +137,20 @@ class QueueTokenViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         token_no = QueueToken.generate_token(
             request.hospital, doctor, visit_date, priority
         )
-        serializer.save(
+        qt = serializer.save(
             hospital=request.hospital,
             created_by=request.user,
             token_no=token_no,
             visit_date=visit_date,
         )
+        broadcast_queue_event(
+            hospital_id=request.hospital.id,
+            payload={"type": "TOKEN_CREATED", "token": QueueTokenSerializer(qt).data},
+            doctor_id=qt.doctor_id,
+        )
 
     @action(detail=False, methods=["get"])
     def today(self, request):
-        """Today's full queue, sorted by priority + issuance order."""
         today = timezone.localdate()
         qs = self.get_queryset().filter(visit_date=today)
         if doctor_id := request.query_params.get("doctor"):
@@ -147,11 +161,15 @@ class QueueTokenViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def call_next(self, request, pk=None):
-        """Mark this token as IN_CONSULT and stamp called_at."""
         qt = self.get_object()
         qt.status = "IN_CONSULT"
         qt.called_at = timezone.now()
         qt.save(update_fields=["status", "called_at"])
+        broadcast_queue_event(
+            hospital_id=request.hospital.id,
+            payload={"type": "TOKEN_UPDATED", "token": QueueTokenSerializer(qt).data},
+            doctor_id=qt.doctor_id,
+        )
         return Response(QueueTokenSerializer(qt).data)
 
     @action(detail=True, methods=["post"])
@@ -160,11 +178,15 @@ class QueueTokenViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         qt.status = "DONE"
         qt.completed_at = timezone.now()
         qt.save(update_fields=["status", "completed_at"])
-        # Sync linked appointment
         if qt.appointment:
             qt.appointment.status = "COMPLETED"
             qt.appointment.consult_ended_at = timezone.now()
             qt.appointment.save(update_fields=["status", "consult_ended_at"])
+        broadcast_queue_event(
+            hospital_id=request.hospital.id,
+            payload={"type": "TOKEN_UPDATED", "token": QueueTokenSerializer(qt).data},
+            doctor_id=qt.doctor_id,
+        )
         return Response(QueueTokenSerializer(qt).data)
 
 

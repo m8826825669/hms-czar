@@ -12,10 +12,10 @@ api_v1_patterns = [
     path("notifications/", include("apps.notifications.urls")),
     path("specialist/", include("apps.specialist.urls")),
     path("reception/", include("apps.reception.urls")),
-    # Phase 1b (next zip):
-    # path("opd/", include("apps.opd.urls")),
-    # path("emr/", include("apps.emr.urls")),
-    # Phase 1c:
+    # Phase 1b
+    path("opd/", include("apps.opd.urls")),
+    path("emr/", include("apps.emr.urls")),
+    # Phase 1c (next):
     # path("billing/", include("apps.billing.urls")),
 ]
 

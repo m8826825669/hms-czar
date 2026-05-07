@@ -4,4 +4,4 @@ from django.apps import AppConfig
 class EmrConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.emr"
-    verbose_name = "Emr"
+    verbose_name = "EMR (Electronic Medical Records)"

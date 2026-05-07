@@ -1,19 +1,25 @@
-"""ASGI config for HMS - supports HTTP + WebSockets via Channels."""
+"""ASGI config with WebSocket routing for OPD live queue."""
 import os
-from django.core.asgi import get_asgi_application
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
+django.setup()
+
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
+from django.core.asgi import get_asgi_application
+
+# Phase 1b: pull in OPD WebSocket routes
+from apps.opd.routing import websocket_urlpatterns as opd_ws_urls
+
 django_asgi_app = get_asgi_application()
-
-from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
-from channels.auth import AuthMiddlewareStack  # noqa: E402
-from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
-
-from config.routing import websocket_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AllowedHostsOriginValidator(
-        AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+        AuthMiddlewareStack(
+            URLRouter(opd_ws_urls)
+        )
     ),
 })

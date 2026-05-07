@@ -1,3 +1,4 @@
+// Phase 1b types - additive to types/hms.ts (replace that file with this)
 export interface Patient {
   id: number;
   uuid: string;
@@ -131,6 +132,134 @@ export interface VisitorPass {
   is_active: boolean;
   id_proof_type?: string;
   id_proof_last4?: string;
+}
+
+// ─── Phase 1b additions ─────────────────────────────────
+export interface Vitals {
+  id: number;
+  patient: number;
+  patient_name: string;
+  patient_mrn: string;
+  queue_token: number | null;
+  recorded_at: string;
+  temperature_c?: string | null;
+  pulse_bpm?: number | null;
+  bp_systolic?: number | null;
+  bp_diastolic?: number | null;
+  bp_text: string;
+  spo2_percent?: number | null;
+  respiration_rate?: number | null;
+  weight_kg?: string | null;
+  height_cm?: string | null;
+  bmi?: string | null;
+  blood_glucose_mgdl?: number | null;
+  pain_score?: number | null;
+  notes?: string;
+}
+
+export interface Drug {
+  id: number;
+  code: string;
+  generic_name: string;
+  brand_name: string;
+  display_name: string;
+  dosage_form: string;
+  strength: string;
+  manufacturer: string;
+  hsn_code: string;
+  gst_rate: string;
+  is_schedule_h: boolean;
+  common_dose: string;
+}
+
+export interface PrescriptionItem {
+  id: number;
+  prescription: number;
+  drug: number | null;
+  drug_display: string;
+  drug_name: string;
+  dose: string;
+  frequency: string;
+  duration_days: number;
+  route: string;
+  instructions?: string;
+  is_continued: boolean;
+  order_index: number;
+}
+
+export interface Prescription {
+  id: number;
+  code: string;
+  prescription_uuid: string;
+  consultation: number | null;
+  patient: number;
+  patient_name: string;
+  patient_mrn: string;
+  doctor: number;
+  doctor_name: string;
+  prescribed_at: string;
+  general_instructions?: string;
+  next_followup_days?: number | null;
+  is_signed: boolean;
+  signed_at?: string;
+  items: PrescriptionItem[];
+}
+
+export interface ConsultationDiagnosis {
+  id: number;
+  consultation: number;
+  icd10_code?: string;
+  diagnosis_text: string;
+  diagnosis_type: "PROVISIONAL" | "CONFIRMED" | "DIFFERENTIAL" | "FINAL";
+  is_primary: boolean;
+  notes?: string;
+  order_index: number;
+}
+
+export interface Consultation {
+  id: number;
+  code: string;
+  patient: number;
+  patient_name: string;
+  patient_mrn: string;
+  patient_age: number;
+  patient_gender: string;
+  doctor: number;
+  doctor_name: string;
+  appointment: number | null;
+  queue_token: number | null;
+  queue_token_no: string;
+  vitals: number | null;
+  vitals_data: Vitals | null;
+  consultation_date: string;
+  chief_complaint?: string;
+  history_of_present_illness?: string;
+  past_medical_history?: string;
+  examination_findings?: string;
+  investigations_advised?: string;
+  general_advice?: string;
+  next_visit_date?: string | null;
+  status: "DRAFT" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  started_at?: string;
+  ended_at?: string;
+  diagnoses: ConsultationDiagnosis[];
+  prescriptions: Prescription[];
+}
+
+export interface Patient360 {
+  patient: Patient;
+  summary: {
+    total_visits: number;
+    total_prescriptions: number;
+    active_allergies_count: number;
+    chronic_conditions_count: number;
+    upcoming_appointments_count: number;
+  };
+  recent_visits: Consultation[];
+  recent_vitals: Vitals[];
+  latest_prescription: Prescription | null;
+  upcoming_appointments: Appointment[];
+  past_appointments: Appointment[];
 }
 
 export interface Paginated<T> {
