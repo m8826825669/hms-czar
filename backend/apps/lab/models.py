@@ -54,7 +54,7 @@ class TestCatalog(TenantBaseModel):
         help_text="Display name, e.g. 'Complete Blood Count'")
     category = models.CharField(max_length=15, choices=CATEGORIES, default="HEMATOLOGY")
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPES, default="BLOOD")
-    sample_volume = models.CharField(max_length=30, blank=True,
+    sample_volume = models.CharField(max_length=100, blank=True,
         help_text="e.g. '3 ml in EDTA tube', '10 ml mid-stream'")
 
     # Pricing — invoice generation pulls from here
@@ -325,7 +325,7 @@ class LabSample(TenantBaseModel):
         help_text="e.g. 'EDTA purple-top', 'plain red-top', 'fluoride grey-top'")
     barcode = models.CharField(max_length=40, blank=True, db_index=True,
         help_text="Auto-generated unique label for the tube")
-    volume = models.CharField(max_length=30, blank=True,
+    volume = models.CharField(max_length=100, blank=True,
         help_text="e.g. '3 ml', '10 ml'")
 
     collected_by = models.ForeignKey(

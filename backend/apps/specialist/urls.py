@@ -1,6 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 from . import views
+from . import views, dashboard_views
 
 router = DefaultRouter()
 router.register("specialties", views.SpecialtyViewSet, basename="specialty")
@@ -12,3 +13,5 @@ router.register("fees", views.ConsultationFeeViewSet, basename="consultation-fee
 router.register("on-call", views.OnCallRosterViewSet, basename="on-call")
 
 urlpatterns = [path("", include(router.urls))]
+
+path("dashboard/today/", dashboard_views.doctor_dashboard_today, name="doctor-dashboard-today"),
