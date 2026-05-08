@@ -34,7 +34,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/research", label: "Research", icon: Microscope, perm: "research.view", group: "Clinical" },
   // Pharmacy
   { href: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill, perm: "pharmacy.view", group: "Pharmacy" },
-  { href: "/dashboard/stock", label: "Stock & Purchase", icon: Package, perm: "stock.view", group: "Pharmacy" },
+  { href: "/dashboard/pharmacy/stock", label: "Stock & Purchase", icon: Package, perm: "stock.view", group: "Pharmacy" },
   { href: "/dashboard/bottles", label: "Bottles (O₂ / IV)", icon: Wind, perm: "bottles.view", group: "Pharmacy" },
   // Support
   { href: "/dashboard/dietary", label: "Dietary", icon: Utensils, perm: "dietary.view", group: "Support" },

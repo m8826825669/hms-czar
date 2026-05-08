@@ -80,6 +80,9 @@ LOCAL_APPS = [
     # Cross-cutting
     "apps.scheduling",
     "apps.reports",
+    "apps.department",
+    "apps.lab",
+   
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

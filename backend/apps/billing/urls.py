@@ -6,6 +6,7 @@ router = DefaultRouter()
 router.register("services", views.ServiceCatalogViewSet, basename="service")
 router.register("invoices", views.InvoiceViewSet, basename="invoice")
 router.register("payments", views.PaymentViewSet, basename="payment")
+router.register("refunds", views.RefundViewSet, basename="refund")  # Phase 2b
 
 urlpatterns = [
     path("", include(router.urls)),
