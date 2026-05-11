@@ -83,6 +83,22 @@ LOCAL_APPS = [
     "apps.reports",
     "apps.department",
     "apps.lab",
+      # Phase 4a
+    "apps.inventory",
+    "apps.assets",
+    "apps.housekeeping",
+
+    # Phase 4b
+    "apps.hr",
+    "apps.security_module",
+
+    ## Phase 4c
+    #"apps.insurance",
+    #"apps.vaccination",
+    #"apps.complaints",
+
+    # Phase 4d
+    #"apps.analytics",
    
 ]
 

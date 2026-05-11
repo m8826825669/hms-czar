@@ -12,6 +12,10 @@ class AppointmentAdmin(admin.ModelAdmin):
     date_hierarchy = "scheduled_date"
     autocomplete_fields = ("patient", "doctor", "location")
 
+# @admin.register(Patient)
+# class PatientAdmin(admin.ModelAdmin):
+#     list_display = ("mrn", "first_name", "last_name", "phone", "gender", "dob")
+#     search_fields = ("mrn", "first_name", "last_name", "phone", "email")  # ← required
 
 @admin.register(QueueToken)
 class QueueTokenAdmin(admin.ModelAdmin):

@@ -2,6 +2,8 @@ from django.contrib import admin
 from .models import (Doctor, Specialty, Qualification, OPDSlot,
                      OPDSlotException, ConsultationFee, OnCallRoster)
 
+class DoctorAdmin(admin.ModelAdmin):
+    search_fields = ("registration_number", "user__first_name", "user__last_name")
 
 @admin.register(Specialty)
 class SpecialtyAdmin(admin.ModelAdmin):
