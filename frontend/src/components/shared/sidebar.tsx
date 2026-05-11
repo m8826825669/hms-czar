@@ -40,6 +40,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/dietary", label: "Dietary", icon: Utensils, perm: "dietary.view", group: "Support" },
   { href: "/dashboard/laundry", label: "Laundry", icon: Shirt, perm: "laundry.view", group: "Support" },
   { href: "/dashboard/ambulance", label: "Ambulance", icon: Truck, perm: "ambulance.view", group: "Support" },
+  { href: "/dashboard/gas-cylinder", label: "Gas Cylinder", icon: Truck, perm: "gas_cylinder.view", group: "Support" },
   { href: "/dashboard/comms", label: "Internal Comms", icon: MessageSquare, perm: "comms.view", group: "Support" },
   // HR
   { href: "/dashboard/staff", label: "Staff & HR", icon: Users, perm: "staff.view", group: "HR" },

@@ -1,29 +1,21 @@
 """
-URL configuration for HMS — Phase 3a (with OT + Blood Bank).
+URL configuration for HMS — Phase 3b (with Ambulance + Dietary + Laundry + Gas Cylinder).
 
 ═════════════════════════════════════════════════════════════════════════════
 IMPORTANT — read before applying:
 ═════════════════════════════════════════════════════════════════════════════
-This file is the cumulative root URL config covering Phases 1a-3a.
+If your existing config/urls.py is customized, DO NOT replace wholesale.
 
-If your existing config/urls.py has been customized (e.g. extra app routes,
-custom auth endpoints, debug toolbar), DO NOT replace it wholesale. Instead:
+Back up first:
+    cp backend/config/urls.py backend/config/urls.py.phase3a.bak
 
-1. Back up your current file:
-       cp backend/config/urls.py backend/config/urls.py.phase2c.bak
-   (or on Windows cmd: copy backend\\config\\urls.py backend\\config\\urls.py.phase2c.bak)
+Then add only these four lines to your urlpatterns list:
+    path("api/ambulance/",      include("apps.ambulance.urls")),
+    path("api/dietary/",        include("apps.dietary.urls")),
+    path("api/laundry/",        include("apps.laundry.urls")),
+    path("api/gas-cylinder/",   include("apps.gas_cylinder.urls")),
 
-2. Add only these two lines to your existing urlpatterns list:
-       path("api/ot/",          include("apps.ot.urls")),
-       path("api/blood-bank/",  include("apps.blood_bank.urls")),
-
-3. Skip the rest of this file.
-
-If you have a clean Phase 2c install with no customizations, you can drop
-this file in directly.
-
-(Path separators above use forward-slash for portability; on Windows use
-your shell's native path separator.)
+If clean Phase 3a install, this file is a safe drop-in.
 ═════════════════════════════════════════════════════════════════════════════
 """
 from django.contrib import admin
@@ -35,39 +27,33 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
 
-    # Auth + accounts
-    path("api/auth/", include("apps.accounts.urls")),
-
-    # Core domain (hospitals, patients, audit)
-    path("api/core/", include("apps.core.urls")),
-
-    # Phase 1a — notifications + specialist + reception
+    # Phases 1a-1c — accounts, core, notifications, specialist, reception, opd, emr, billing, public
+    path("api/auth/",          include("apps.accounts.urls")),
+    path("api/core/",          include("apps.core.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/specialist/",    include("apps.specialist.urls")),
     path("api/reception/",     include("apps.reception.urls")),
+    path("api/opd/",           include("apps.opd.urls")),
+    path("api/emr/",           include("apps.emr.urls")),
+    path("api/billing/",       include("apps.billing.urls")),
+    path("api/public/",        include("apps.public.urls")),
 
-    # Phase 1b — OPD + EMR
-    path("api/opd/", include("apps.opd.urls")),
-    path("api/emr/", include("apps.emr.urls")),
-
-    # Phase 1c — billing + public
-    path("api/billing/", include("apps.billing.urls")),
-    path("api/public/",  include("apps.public.urls")),
-
-    # Phase 2a — department + pharmacy
+    # Phase 2a-2c — departments, pharmacy, lab, ipd, reports
     path("api/departments/", include("apps.department.urls")),
     path("api/pharmacy/",    include("apps.pharmacy.urls")),
+    path("api/lab/",         include("apps.lab.urls")),
+    path("api/ipd/",         include("apps.ipd.urls")),
+   # path("api/reports/",     include("apps.reports.urls")),
 
-    # Phase 2b — lab
-    path("api/lab/", include("apps.lab.urls")),
-
-    # Phase 2c — IPD + reports
-    path("api/ipd/",     include("apps.ipd.urls")),
-    path("api/reports/", include("apps.reports.urls")),
-
-    # Phase 3a — OT + Blood Bank  ← NEW
+    # Phase 3a — OT + Blood Bank
     path("api/ot/",          include("apps.ot.urls")),
     path("api/blood-bank/",  include("apps.blood_bank.urls")),
+
+    # Phase 3b — Ambulance + Dietary + Laundry + Gas Cylinder  ← NEW
+    path("api/ambulance/",     include("apps.ambulance.urls")),
+    path("api/dietary/",       include("apps.dietary.urls")),
+    path("api/laundry/",       include("apps.laundry.urls")),
+    path("api/gas-cylinder/",  include("apps.gas_cylinder.urls")),
 ]
 
 if settings.DEBUG:

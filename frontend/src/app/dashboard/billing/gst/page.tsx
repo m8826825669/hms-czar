@@ -361,7 +361,16 @@ function B2CSTable({ rows }: { rows: GSTR1Row[] }) {
   );
 }
 
-function B2CLTable({ rows }: { rows: Array<{ invoice_number: string; invoice_date: string; place_of_supply: string; rate: string; taxable_value: string; igst: string; total: string }> }) {
+function B2CLTable({ rows }: { rows: Array<{ 
+  invoice_no: string; 
+  invoice_date: string; 
+  invoice_value: string; 
+  place_of_supply: string; 
+  rate: string; 
+  taxable_value: string; 
+  igst: string; 
+  total: string;
+  }> }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -378,8 +387,8 @@ function B2CLTable({ rows }: { rows: Array<{ invoice_number: string; invoice_dat
         </thead>
         <tbody className="divide-y divide-slate-100 font-mono">
           {rows.map((r) => (
-            <tr key={r.invoice_number} className="hover:bg-slate-50">
-              <td className="px-3 py-2">{r.invoice_number}</td>
+            <tr key={r.invoice_no} className="hover:bg-slate-50">
+              <td className="px-3 py-2">{r.invoice_no}</td>
               <td className="px-3 py-2">{r.invoice_date}</td>
               <td className="px-3 py-2">{r.place_of_supply}</td>
               <td className="px-3 py-2 text-right">{Number(r.rate).toFixed(2)}%</td>

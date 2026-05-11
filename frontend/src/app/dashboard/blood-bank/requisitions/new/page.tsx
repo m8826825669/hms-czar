@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { requisitionsApi } from "@/lib/api/blood_bank";
-import { apiClient } from "@/src/lib/api/client";
+import { apiClient } from "@/lib/api/client";
 
 interface Patient {
   id: number; mrn: string; first_name: string; last_name: string; phone: string;
