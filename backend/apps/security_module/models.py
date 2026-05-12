@@ -61,8 +61,10 @@ class VisitorPass(models.Model):
                                      default="PATIENT")
     purpose = models.CharField(max_length=300, blank=True, default="")
     visiting_patient = models.ForeignKey(
-        "reception.Patient", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="visitor_passes",
+        "core.Patient",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="security_visitor_passes",
     )
     visiting_person = models.CharField(max_length=120, blank=True, default="",
         help_text="If not visiting a registered patient")

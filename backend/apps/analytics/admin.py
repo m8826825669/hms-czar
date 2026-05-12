@@ -8,7 +8,7 @@ class SavedReportAdmin(admin.ModelAdmin):
     list_display = ("name", "report_type", "is_pinned", "created_by", "created_at")
     list_filter = ("report_type", "is_pinned")
     search_fields = ("name", "description")
-    autocomplete_fields = ("hospital",)
+    raw_id_fields = ("hospital",)
 
 
 @admin.register(ReportRun)

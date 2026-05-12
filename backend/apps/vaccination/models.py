@@ -88,7 +88,7 @@ class VaccinationRecord(models.Model):
 
     hospital = models.ForeignKey("core.Hospital", on_delete=models.CASCADE,
                                   related_name="vaccination_records")
-    patient = models.ForeignKey("reception.Patient", on_delete=models.CASCADE,
+    patient = models.ForeignKey("core.Patient", on_delete=models.CASCADE,
                                    related_name="vaccinations")
     vaccine = models.ForeignKey(Vaccine, on_delete=models.PROTECT,
                                    related_name="records")

@@ -23,7 +23,7 @@ class SurgicalProcedureAdmin(admin.ModelAdmin):
 class SurgeryTeamInline(admin.TabularInline):
     model = SurgeryTeam
     extra = 0
-    autocomplete_fields = ["doctor"]
+    raw_id_fields = ["doctor"]
 
 
 class OTConsumableInline(admin.TabularInline):
@@ -38,7 +38,7 @@ class SurgeryBookingAdmin(admin.ModelAdmin):
                      "scheduled_start", "status", "urgency"]
     list_filter = ["status", "urgency", "theatre"]
     search_fields = ["code", "patient__mrn"]
-    autocomplete_fields = [
+    raw_id_fields = [
         "patient", "theatre", "procedure",
         "primary_surgeon", "anaesthetist", "admission", "invoice",
     ]
@@ -54,5 +54,5 @@ class SurgeryBookingAdmin(admin.ModelAdmin):
 @admin.register(OTRegister)
 class OTRegisterAdmin(admin.ModelAdmin):
     list_display = ["booking", "prepared_by", "prepared_at", "finalized_at"]
-    autocomplete_fields = ["booking", "prepared_by"]
+    raw_id_fields = ["booking", "prepared_by"]
     readonly_fields = ["prepared_at", "finalized_at"]

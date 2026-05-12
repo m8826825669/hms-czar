@@ -15,7 +15,7 @@ class LinenStockAdmin(admin.ModelAdmin):
     list_display = ["item", "department", "ward_label",
                      "total_units", "in_use", "in_laundry", "clean_in_stock"]
     list_filter = ["department", "item__category"]
-    autocomplete_fields = ["item", "department"]
+    raw_id_fields = ["item", "department"]
 
 
 class LaundryBatchItemInline(admin.TabularInline):
@@ -30,7 +30,7 @@ class LaundryBatchAdmin(admin.ModelAdmin):
                      "vendor_name", "status", "total_cost", "created_at"]
     list_filter = ["status", "batch_type"]
     search_fields = ["code", "vendor_name"]
-    autocomplete_fields = ["source_department"]
+    raw_id_fields = ["source_department"]
     readonly_fields = ["code", "pickup_at", "returned_at", "total_cost",
                         "created_at", "updated_at"]
     inlines = [LaundryBatchItemInline]
@@ -41,4 +41,4 @@ class LinenLossAdmin(admin.ModelAdmin):
     list_display = ["item", "loss_type", "quantity", "department",
                      "cost_impact", "reported_at"]
     list_filter = ["loss_type", "department"]
-    autocomplete_fields = ["item", "department", "batch"]
+    raw_id_fields = ["item", "department", "batch"]

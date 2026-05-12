@@ -35,7 +35,7 @@ class DoctorAdmin(admin.ModelAdmin):
     list_filter = ("is_consulting", "is_active", "primary_department")
     search_fields = ("registration_number", "user__first_name", "user__last_name")
     filter_horizontal = ("specialties", "qualifications")
-    autocomplete_fields = ("user", "primary_department")
+    raw_id_fields = ("user", "primary_department")
     inlines = [OPDSlotInline, ConsultationFeeInline]
 
 

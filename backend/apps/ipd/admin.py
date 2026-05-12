@@ -59,7 +59,7 @@ class AdmissionAdmin(admin.ModelAdmin):
     search_fields = ("code", "patient__mrn", "patient__first_name",
                      "patient__last_name")
     date_hierarchy = "admitted_at"
-    autocomplete_fields = ("patient", "bed", "attending_doctor",
+    raw_id_fields = ("patient", "bed", "attending_doctor",
                            "department", "invoice")
     readonly_fields = ("code", "locked_bed_rent", "locked_nursing_charge",
                        "locked_gst_rate", "discharged_at",
@@ -70,5 +70,5 @@ class AdmissionAdmin(admin.ModelAdmin):
 @admin.register(DischargeSummary)
 class DischargeSummaryAdmin(admin.ModelAdmin):
     list_display = ("admission", "prepared_by", "prepared_at", "finalized_at")
-    autocomplete_fields = ("admission", "prepared_by")
+    raw_id_fields = ("admission", "prepared_by")
     readonly_fields = ("prepared_at", "finalized_at")

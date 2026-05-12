@@ -7,4 +7,4 @@ class DepartmentAdmin(admin.ModelAdmin):
     list_display = ("code", "name", "type", "head_doctor", "is_active", "sort_order")
     list_filter = ("type", "is_active")
     search_fields = ("code", "name")
-    autocomplete_fields = ("head_doctor",)
+    raw_id_fields = ("head_doctor",)

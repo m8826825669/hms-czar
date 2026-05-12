@@ -13,6 +13,8 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
+def _current_year():
+    return timezone.now().year
 
 class Designation(models.Model):
     GRADES = [
@@ -191,7 +193,7 @@ class LeaveBalance(models.Model):
                                     related_name="leave_balances")
     leave_type = models.ForeignKey(LeaveType, on_delete=models.PROTECT,
                                        related_name="balances")
-    year = models.PositiveIntegerField(default=lambda: timezone.now().year)
+    year = models.PositiveIntegerField(default=_current_year)
     allocated = models.DecimalField(max_digits=5, decimal_places=1)
     used = models.DecimalField(max_digits=5, decimal_places=1, default=Decimal("0"))
     pending = models.DecimalField(max_digits=5, decimal_places=1, default=Decimal("0"))

@@ -27,7 +27,7 @@ class AssetAdmin(admin.ModelAdmin):
                      "status", "condition", "purchase_date", "purchase_cost"]
     list_filter = ["status", "condition", "category", "department"]
     search_fields = ["asset_code", "name", "serial_number"]
-    autocomplete_fields = ["category", "department", "custodian"]
+    raw_id_fields = ["category", "department", "custodian"]
     readonly_fields = ["asset_code", "created_at", "updated_at"]
     inlines = [AssetMaintenanceLogInline, AMCInline]
 
@@ -37,7 +37,7 @@ class AssetMaintenanceLogAdmin(admin.ModelAdmin):
     list_display = ["asset", "maintenance_type", "scheduled_date",
                      "status", "cost", "vendor_name"]
     list_filter = ["maintenance_type", "status"]
-    autocomplete_fields = ["asset"]
+    raw_id_fields = ["asset"]
 
 
 @admin.register(AMC)
@@ -46,11 +46,11 @@ class AMCAdmin(admin.ModelAdmin):
                      "start_date", "end_date", "status"]
     list_filter = ["status"]
     search_fields = ["contract_number", "vendor_name"]
-    autocomplete_fields = ["asset"]
+    raw_id_fields = ["asset"]
 
 
 @admin.register(AssetDisposal)
 class AssetDisposalAdmin(admin.ModelAdmin):
     list_display = ["asset", "disposal_type", "disposal_date", "sale_value"]
     list_filter = ["disposal_type"]
-    autocomplete_fields = ["asset"]
+    raw_id_fields = ["asset"]

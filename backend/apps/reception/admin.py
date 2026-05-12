@@ -10,7 +10,7 @@ class AppointmentAdmin(admin.ModelAdmin):
     search_fields = ("code", "patient__mrn", "patient__phone",
                      "patient__first_name", "patient__last_name")
     date_hierarchy = "scheduled_date"
-    autocomplete_fields = ("patient", "doctor", "location")
+    raw_id_fields = ("patient", "doctor", "location")
 
 # @admin.register(Patient)
 # class PatientAdmin(admin.ModelAdmin):

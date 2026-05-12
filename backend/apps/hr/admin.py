@@ -18,7 +18,7 @@ class EmployeeAdmin(admin.ModelAdmin):
                      "designation", "department", "status", "date_of_joining"]
     list_filter = ["status", "department", "designation", "employment_type"]
     search_fields = ["employee_code", "first_name", "last_name", "phone"]
-    autocomplete_fields = ["designation", "department", "reports_to", "user"]
+    raw_id_fields = ["designation", "department", "reports_to", "user"]
     readonly_fields = ["employee_code", "created_at", "updated_at"]
 
 
@@ -26,7 +26,7 @@ class EmployeeAdmin(admin.ModelAdmin):
 class EmploymentContractAdmin(admin.ModelAdmin):
     list_display = ["contract_number", "employee", "start_date",
                      "end_date", "monthly_salary", "is_active"]
-    autocomplete_fields = ["employee"]
+    raw_id_fields = ["employee"]
 
 
 @admin.register(LeaveType)
@@ -39,7 +39,7 @@ class LeaveBalanceAdmin(admin.ModelAdmin):
     list_display = ["employee", "leave_type", "year",
                      "allocated", "used", "pending"]
     list_filter = ["year", "leave_type"]
-    autocomplete_fields = ["employee", "leave_type"]
+    raw_id_fields = ["employee", "leave_type"]
 
 
 @admin.register(LeaveRequest)
@@ -47,5 +47,5 @@ class LeaveRequestAdmin(admin.ModelAdmin):
     list_display = ["code", "employee", "leave_type",
                      "start_date", "end_date", "num_days", "status"]
     list_filter = ["status", "leave_type"]
-    autocomplete_fields = ["employee", "leave_type", "approved_by"]
+    raw_id_fields = ["employee", "leave_type", "approved_by"]
     readonly_fields = ["code", "applied_at", "decision_at"]

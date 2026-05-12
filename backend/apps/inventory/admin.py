@@ -32,7 +32,7 @@ class StockItemAdmin(admin.ModelAdmin):
                      "reorder_level", "is_active"]
     list_filter = ["item_type", "is_active", "category"]
     search_fields = ["code", "name"]
-    autocomplete_fields = ["category"]
+    raw_id_fields = ["category"]
 
 
 @admin.register(StockBatch)
@@ -41,13 +41,13 @@ class StockBatchAdmin(admin.ModelAdmin):
                      "expiry_date", "is_active"]
     list_filter = ["store", "is_active"]
     search_fields = ["batch_number", "item__code", "item__name"]
-    autocomplete_fields = ["item", "store", "supplier"]
+    raw_id_fields = ["item", "store", "supplier"]
 
 
 class POLineInline(admin.TabularInline):
     model = POLine
     extra = 0
-    autocomplete_fields = ["item"]
+    raw_id_fields = ["item"]
     readonly_fields = ["subtotal", "gst_amount", "line_total"]
 
 
@@ -57,7 +57,7 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
                      "status", "total_amount"]
     list_filter = ["status", "store"]
     search_fields = ["code"]
-    autocomplete_fields = ["supplier", "store"]
+    raw_id_fields = ["supplier", "store"]
     readonly_fields = ["code", "subtotal", "gst_amount", "total_amount",
                          "approved_at", "created_at", "updated_at"]
     inlines = [POLineInline]
@@ -66,7 +66,7 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
 class GRNLineInline(admin.TabularInline):
     model = GRNLine
     extra = 0
-    autocomplete_fields = ["item"]
+    raw_id_fields = ["item"]
 
 
 @admin.register(GRN)
@@ -75,14 +75,14 @@ class GRNAdmin(admin.ModelAdmin):
                      "status", "total_amount"]
     list_filter = ["status", "store"]
     search_fields = ["code", "supplier_invoice_number"]
-    autocomplete_fields = ["purchase_order", "supplier", "store"]
+    raw_id_fields = ["purchase_order", "supplier", "store"]
     inlines = [GRNLineInline]
 
 
 class RequisitionLineInline(admin.TabularInline):
     model = RequisitionLine
     extra = 0
-    autocomplete_fields = ["item"]
+    raw_id_fields = ["item"]
 
 
 @admin.register(StockRequisition)
@@ -91,7 +91,7 @@ class StockRequisitionAdmin(admin.ModelAdmin):
                      "status", "requested_date"]
     list_filter = ["status", "urgency"]
     search_fields = ["code"]
-    autocomplete_fields = ["requesting_dept", "source_store"]
+    raw_id_fields = ["requesting_dept", "source_store"]
     inlines = [RequisitionLineInline]
 
 
@@ -99,14 +99,14 @@ class IssueLineInline(admin.TabularInline):
     model = IssueLine
     extra = 0
     readonly_fields = ["line_total"]
-    autocomplete_fields = ["batch"]
+    raw_id_fields = ["batch"]
 
 
 @admin.register(StockIssue)
 class StockIssueAdmin(admin.ModelAdmin):
     list_display = ["code", "issuing_store", "receiving_dept",
                      "issue_date", "total_value"]
-    autocomplete_fields = ["requisition", "issuing_store", "receiving_dept"]
+    raw_id_fields = ["requisition", "issuing_store", "receiving_dept"]
     inlines = [IssueLineInline]
 
 
@@ -115,4 +115,4 @@ class StockTransferAdmin(admin.ModelAdmin):
     list_display = ["code", "from_store", "to_store", "item",
                      "quantity", "status", "transfer_date"]
     list_filter = ["status"]
-    autocomplete_fields = ["from_store", "to_store", "item"]
+    raw_id_fields = ["from_store", "to_store", "item"]

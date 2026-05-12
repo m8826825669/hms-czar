@@ -50,7 +50,7 @@ class LabOrderAdmin(admin.ModelAdmin):
     search_fields = ("code", "patient__mrn", "patient__first_name",
                      "patient__last_name")
     date_hierarchy = "order_date"
-    autocomplete_fields = ("patient", "consultation", "ordered_by",
+    raw_id_fields = ("patient", "consultation", "ordered_by",
                            "reported_by", "invoice")
     readonly_fields = ("code", "subtotal", "cgst_amount", "sgst_amount",
                        "igst_amount", "total_amount",
@@ -74,4 +74,4 @@ class LabSampleAdmin(admin.ModelAdmin):
                     "is_rejected", "collected_at")
     list_filter = ("sample_type", "is_received", "is_rejected")
     search_fields = ("barcode", "order__code")
-    autocomplete_fields = ("order",)
+    raw_id_fields = ("order",)

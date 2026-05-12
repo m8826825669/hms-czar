@@ -16,7 +16,7 @@ class VisitorPassAdmin(admin.ModelAdmin):
                      "department_to_visit", "entry_time", "status"]
     list_filter = ["status", "visit_type"]
     search_fields = ["pass_number", "visitor_name", "visitor_phone"]
-    autocomplete_fields = ["visiting_patient", "department_to_visit",
+    raw_id_fields = ["visiting_patient", "department_to_visit",
                               "issued_by", "exit_logged_by"]
     readonly_fields = ["pass_number", "created_at", "updated_at"]
 
@@ -27,7 +27,7 @@ class GatePassAdmin(admin.ModelAdmin):
                      "vehicle_number", "issued_at", "status"]
     list_filter = ["status", "pass_type"]
     search_fields = ["pass_number", "issued_to_party"]
-    autocomplete_fields = ["sender_department", "received_at_gate_by"]
+    raw_id_fields = ["sender_department", "received_at_gate_by"]
     readonly_fields = ["pass_number", "created_at", "updated_at"]
 
 
@@ -37,5 +37,5 @@ class IncidentAdmin(admin.ModelAdmin):
                      "title", "occurred_at", "status"]
     list_filter = ["status", "incident_type", "severity"]
     search_fields = ["incident_number", "title", "location"]
-    autocomplete_fields = ["department", "handled_by"]
+    raw_id_fields = ["department", "handled_by"]
     readonly_fields = ["incident_number", "created_at", "updated_at"]

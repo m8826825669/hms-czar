@@ -35,7 +35,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_filter = ("status", "bill_date", "gst_split")
     search_fields = ("code", "patient__mrn", "patient__first_name", "patient__last_name")
     date_hierarchy = "bill_date"
-    autocomplete_fields = ("patient", "consultation", "appointment")
+    raw_id_fields = ("patient", "consultation", "appointment")
     readonly_fields = ("subtotal", "taxable_amount", "cgst_amount", "sgst_amount",
                        "igst_amount", "total_amount", "amount_paid", "amount_refunded",
                        "amount_due", "razorpay_order_id", "printed_at")
@@ -55,6 +55,6 @@ class RefundAdmin(admin.ModelAdmin):
                     "requested_at", "processed_at")
     list_filter = ("status", "method", "requested_at")
     search_fields = ("code", "invoice__code", "reason")
-    autocomplete_fields = ("invoice", "payment")
+    raw_id_fields = ("invoice", "payment")
     readonly_fields = ("code", "approved_at", "processed_at",
                        "razorpay_refund_id", "razorpay_status")

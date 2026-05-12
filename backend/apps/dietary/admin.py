@@ -29,7 +29,7 @@ class DietPlanAdmin(admin.ModelAdmin):
     list_display = ["patient", "diet_type", "status", "started_at", "ended_at"]
     list_filter = ["status", "diet_type"]
     search_fields = ["patient__mrn", "admission__code"]
-    autocomplete_fields = ["patient", "admission", "diet_type", "prescribed_by"]
+    raw_id_fields = ["patient", "admission", "diet_type", "prescribed_by"]
     readonly_fields = ["created_at", "updated_at"]
     inlines = [PatientMealInline]
 
@@ -38,7 +38,7 @@ class DietPlanAdmin(admin.ModelAdmin):
 class PatientMealAdmin(admin.ModelAdmin):
     list_display = ["diet_plan", "meal_date", "meal_type", "item", "status"]
     list_filter = ["status", "meal_type", "meal_date"]
-    autocomplete_fields = ["diet_plan", "item"]
+    raw_id_fields = ["diet_plan", "item"]
     readonly_fields = ["delivered_at", "created_at", "updated_at"]
 
 
@@ -46,4 +46,4 @@ class PatientMealAdmin(admin.ModelAdmin):
 class KitchenOrderAdmin(admin.ModelAdmin):
     list_display = ["order_date", "meal_type", "item", "quantity", "is_finalized"]
     list_filter = ["order_date", "meal_type", "is_finalized"]
-    autocomplete_fields = ["item"]
+    raw_id_fields = ["item"]

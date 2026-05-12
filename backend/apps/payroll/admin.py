@@ -15,13 +15,13 @@ class SalaryComponentAdmin(admin.ModelAdmin):
 class SalaryStructureLineInline(admin.TabularInline):
     model = SalaryStructureLine
     extra = 0
-    autocomplete_fields = ["component"]
+    raw_id_fields = ["component"]
 
 
 @admin.register(SalaryStructure)
 class SalaryStructureAdmin(admin.ModelAdmin):
     list_display = ["employee", "gross_salary", "effective_from", "effective_to"]
-    autocomplete_fields = ["employee"]
+    raw_id_fields = ["employee"]
     inlines = [SalaryStructureLineInline]
 
 
@@ -44,7 +44,7 @@ class PayrollRunAdmin(admin.ModelAdmin):
 class PayslipLineInline(admin.TabularInline):
     model = PayslipLine
     extra = 0
-    autocomplete_fields = ["component"]
+    raw_id_fields = ["component"]
 
 
 @admin.register(Payslip)
@@ -52,7 +52,7 @@ class PayslipAdmin(admin.ModelAdmin):
     list_display = ["code", "employee", "payroll_run", "gross_earnings",
                      "gross_deductions", "net_pay", "status"]
     list_filter = ["status", "payroll_run"]
-    autocomplete_fields = ["employee", "payroll_run"]
+    raw_id_fields = ["employee", "payroll_run"]
     inlines = [PayslipLineInline]
 
 
@@ -61,4 +61,4 @@ class LoanAdvanceAdmin(admin.ModelAdmin):
     list_display = ["code", "employee", "loan_amount",
                      "monthly_deduction", "total_paid", "status"]
     list_filter = ["status"]
-    autocomplete_fields = ["employee"]
+    raw_id_fields = ["employee"]

@@ -73,7 +73,7 @@ class Ticket(models.Model):
     reporter_phone = models.CharField(max_length=20, blank=True, default="")
     reporter_email = models.EmailField(blank=True, default="")
     related_patient = models.ForeignKey(
-        "reception.Patient", on_delete=models.SET_NULL,
+        "core.Patient", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="tickets",
     )
 
@@ -139,7 +139,7 @@ class TicketComment(models.Model):
 class NPSResponse(models.Model):
     hospital = models.ForeignKey("core.Hospital", on_delete=models.CASCADE,
                                   related_name="nps_responses")
-    patient = models.ForeignKey("reception.Patient", on_delete=models.SET_NULL,
+    patient = models.ForeignKey("core.Patient", on_delete=models.SET_NULL,
                                    null=True, blank=True, related_name="nps_responses")
     reporter_name = models.CharField(max_length=120)
     reporter_phone = models.CharField(max_length=20, blank=True, default="")

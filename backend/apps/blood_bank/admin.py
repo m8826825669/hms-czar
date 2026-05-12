@@ -25,7 +25,7 @@ class BloodDonationAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "blood_group"]
     search_fields = ["donation_id", "donor__donor_id"]
-    autocomplete_fields = ["donor"]
+    raw_id_fields = ["donor"]
     readonly_fields = [
         "donation_id", "donation_date",
         "screening_completed_at", "created_at", "updated_at",
@@ -40,7 +40,7 @@ class BloodBagAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "blood_group", "component"]
     search_fields = ["bag_id", "donation__donation_id"]
-    autocomplete_fields = ["donation"]
+    raw_id_fields = ["donation"]
     readonly_fields = ["bag_id", "created_at", "updated_at",
                         "discarded_at", "discarded_by"]
 
@@ -48,14 +48,14 @@ class BloodBagAdmin(admin.ModelAdmin):
 class CrossMatchInline(admin.TabularInline):
     model = CrossMatch
     extra = 0
-    autocomplete_fields = ["bag"]
+    raw_id_fields = ["bag"]
     readonly_fields = ["performed_at", "created_at"]
 
 
 class BloodIssueInline(admin.TabularInline):
     model = BloodIssue
     extra = 0
-    autocomplete_fields = ["bag", "invoice"]
+    raw_id_fields = ["bag", "invoice"]
     readonly_fields = ["issued_at", "created_at"]
 
 
@@ -67,7 +67,7 @@ class BloodRequisitionAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "urgency", "blood_group", "component"]
     search_fields = ["code", "patient__mrn"]
-    autocomplete_fields = ["patient", "requested_by", "department", "admission"]
+    raw_id_fields = ["patient", "requested_by", "department", "admission"]
     readonly_fields = ["code", "requested_at", "issued_at", "created_at", "updated_at"]
     inlines = [CrossMatchInline, BloodIssueInline]
 
@@ -76,5 +76,5 @@ class BloodRequisitionAdmin(admin.ModelAdmin):
 class BloodIssueAdmin(admin.ModelAdmin):
     list_display = ["bag", "requisition", "issued_to_dept",
                      "issued_at", "bag_returned"]
-    autocomplete_fields = ["requisition", "bag", "invoice"]
+    raw_id_fields = ["requisition", "bag", "invoice"]
     readonly_fields = ["issued_at", "created_at"]

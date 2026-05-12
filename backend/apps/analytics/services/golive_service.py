@@ -299,7 +299,7 @@ def _check_media_dir():
 
 
 def _check_patient_data():
-    Patient = _model("reception.Patient")
+    Patient = _model("core.Patient")
     if not Patient:
         return _row("Patient data", "Operational", "WARN", "Patient model not installed.")
     n = Patient.objects.count()

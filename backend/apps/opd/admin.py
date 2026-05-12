@@ -23,7 +23,7 @@ class ConsultationAdmin(admin.ModelAdmin):
     list_filter = ("status", "consultation_date")
     search_fields = ("code", "patient__mrn", "patient__first_name", "patient__last_name")
     date_hierarchy = "consultation_date"
-    autocomplete_fields = ("patient", "doctor", "appointment", "queue_token", "vitals")
+    raw_id_fields = ("patient", "doctor", "appointment", "queue_token", "vitals")
     inlines = [ConsultationDiagnosisInline]
 
 

@@ -32,7 +32,7 @@ class DispatchAdmin(admin.ModelAdmin):
                      "ambulance", "requested_at"]
     list_filter = ["status", "priority", "call_type"]
     search_fields = ["code", "patient__mrn", "caller_name"]
-    autocomplete_fields = ["patient", "ambulance", "driver", "paramedic", "invoice"]
+    raw_id_fields = ["patient", "ambulance", "driver", "paramedic", "invoice"]
     readonly_fields = [
         "code", "requested_at", "assigned_at", "en_route_at", "on_scene_at",
         "patient_picked_at", "at_hospital_at", "completed_at",

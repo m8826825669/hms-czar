@@ -32,7 +32,7 @@ class CylinderAdmin(admin.ModelAdmin):
                      "next_hydro_test_due", "is_active"]
     list_filter = ["status", "cylinder_type__gas_type", "is_active"]
     search_fields = ["serial_number", "barcode"]
-    autocomplete_fields = ["cylinder_type", "current_department"]
+    raw_id_fields = ["cylinder_type", "current_department"]
     inlines = [CylinderUsageInline, CylinderInspectionInline]
 
 
@@ -50,4 +50,4 @@ class CylinderInspectionAdmin(admin.ModelAdmin):
     list_display = ["cylinder", "inspection_type", "outcome",
                      "inspection_date", "next_due_date"]
     list_filter = ["inspection_type", "outcome"]
-    autocomplete_fields = ["cylinder"]
+    raw_id_fields = ["cylinder"]

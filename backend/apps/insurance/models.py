@@ -77,7 +77,7 @@ class PolicyCoverage(models.Model):
 
     hospital = models.ForeignKey("core.Hospital", on_delete=models.CASCADE,
                                   related_name="policy_coverages")
-    patient = models.ForeignKey("reception.Patient", on_delete=models.CASCADE,
+    patient = models.ForeignKey("core.Patient", on_delete=models.CASCADE,
                                    related_name="policies")
     insurance_company = models.ForeignKey(InsuranceCompany, on_delete=models.PROTECT,
                                              related_name="policies")
@@ -129,7 +129,7 @@ class PreAuth(models.Model):
     code = models.CharField(max_length=30, unique=True, db_index=True,
         help_text="Auto-generated, e.g. PA-20260508-0001")
 
-    patient = models.ForeignKey("reception.Patient", on_delete=models.PROTECT,
+    patient = models.ForeignKey("core.Patient", on_delete=models.PROTECT,
                                    related_name="pre_auths")
     policy = models.ForeignKey(PolicyCoverage, on_delete=models.PROTECT,
                                   related_name="pre_auths")
@@ -191,7 +191,7 @@ class Claim(models.Model):
     code = models.CharField(max_length=30, unique=True, db_index=True,
         help_text="Auto-generated, e.g. CL-20260508-0001")
 
-    patient = models.ForeignKey("reception.Patient", on_delete=models.PROTECT,
+    patient = models.ForeignKey("core.Patient", on_delete=models.PROTECT,
                                    related_name="claims")
     policy = models.ForeignKey(PolicyCoverage, on_delete=models.PROTECT,
                                   related_name="claims")

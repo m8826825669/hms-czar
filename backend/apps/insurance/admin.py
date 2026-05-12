@@ -25,7 +25,7 @@ class PolicyCoverageAdmin(admin.ModelAdmin):
                      "cover_type", "sum_insured", "is_active"]
     list_filter = ["cover_type", "is_active", "insurance_company"]
     search_fields = ["policy_number", "member_id", "policy_holder_name"]
-    autocomplete_fields = ["patient", "insurance_company", "tpa"]
+    raw_id_fields = ["patient", "insurance_company", "tpa"]
 
 
 @admin.register(PreAuth)
@@ -34,7 +34,7 @@ class PreAuthAdmin(admin.ModelAdmin):
                      "requested_amount", "approved_amount", "request_date"]
     list_filter = ["status", "urgency"]
     search_fields = ["code", "tpa_reference"]
-    autocomplete_fields = ["patient", "policy", "admission"]
+    raw_id_fields = ["patient", "policy", "admission"]
     readonly_fields = ["code"]
 
 
@@ -55,6 +55,6 @@ class ClaimAdmin(admin.ModelAdmin):
                      "settled_amount", "submission_date"]
     list_filter = ["status", "claim_type"]
     search_fields = ["code", "tpa_claim_number"]
-    autocomplete_fields = ["patient", "policy", "pre_auth", "invoice", "admission"]
+    raw_id_fields = ["patient", "policy", "pre_auth", "invoice", "admission"]
     readonly_fields = ["code"]
     inlines = [ClaimLineInline, ClaimDocumentInline]

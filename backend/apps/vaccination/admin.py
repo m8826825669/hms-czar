@@ -21,7 +21,7 @@ class VaccinationRecordAdmin(admin.ModelAdmin):
     list_display = ["patient", "vaccine", "dose_number",
                      "status", "administered_date"]
     list_filter = ["status", "vaccine"]
-    autocomplete_fields = ["patient", "vaccine"]
+    raw_id_fields = ["patient", "vaccine"]
 
 
 @admin.register(VaccinationCertificate)

@@ -93,12 +93,12 @@ LOCAL_APPS = [
     "apps.security_module",
 
     ## Phase 4c
-    #"apps.insurance",
-    #"apps.vaccination",
-    #"apps.complaints",
+    "apps.insurance",
+    "apps.vaccination",
+    "apps.complaints",
 
     # Phase 4d
-    #"apps.analytics",
+    "apps.analytics",
    
 ]
 

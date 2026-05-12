@@ -7,7 +7,7 @@ class UserRoleInline(admin.TabularInline):
     model = UserRole
     extra = 0
     fk_name = "user"
-    autocomplete_fields = ["role", "department"]
+    raw_id_fields = ["role", "department"]
 
 
 @admin.register(User)
@@ -44,4 +44,4 @@ class RoleAdmin(admin.ModelAdmin):
 @admin.register(UserRole)
 class UserRoleAdmin(admin.ModelAdmin):
     list_display = ("user", "role", "department", "assigned_at")
-    autocomplete_fields = ("user", "role", "department")
+    raw_id_fields = ("user", "role", "department")

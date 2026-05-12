@@ -8,7 +8,7 @@ class DrugBatchAdmin(admin.ModelAdmin):
                     "qty_purchased", "mrp", "supplier_name")
     list_filter = ("expiry_date", "supplier_name")
     search_fields = ("drug__generic_name", "drug__brand_name", "batch_no")
-    autocomplete_fields = ("drug",)
+    raw_id_fields = ("drug",)
     date_hierarchy = "expiry_date"
 
 
@@ -35,7 +35,7 @@ class PharmacyOrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "order_date")
     search_fields = ("code", "patient__mrn", "patient__first_name",
                      "patient__last_name")
-    autocomplete_fields = ("patient", "prescription", "consultation", "invoice")
+    raw_id_fields = ("patient", "prescription", "consultation", "invoice")
     inlines = [PharmacyOrderItemInline]
     readonly_fields = ("subtotal", "cgst_amount", "sgst_amount", "igst_amount",
                        "total_amount", "dispensed_at")
