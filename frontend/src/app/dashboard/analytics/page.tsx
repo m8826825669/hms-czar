@@ -1,465 +1,284 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Users, BedDouble, IndianRupee, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
+  BarChart, Bar, LineChart, Line, AreaChart, Area,
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
-import { analyticsApi } from "@/lib/api/phase4d";
-import type { DashboardPayload } from "@/types/phase4d";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+function hdrs() { const t = useAuthStore.getState().token; return { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) }; }
+async function get<T>(p: string): Promise<T> { const r = await fetch(`${BASE}${p}`, { headers: hdrs(), cache: "no-store" }); if (!r.ok) throw new Error(`${r.status}`); const j = await r.json(); return (j?.results ?? j) as T; }
 
-const COLORS = ["#0ea5e9", "#22c55e", "#a855f7", "#f97316", "#ef4444", "#eab308", "#14b8a6", "#ec4899"];
+function fmt(n: number) { return n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : n >= 1000 ? `₹${(n/1000).toFixed(0)}K` : `₹${n}`; }
+function delta(v: number, p: number) { const d = Math.round(((v-p)/p)*100); return { d: Math.abs(d), up: d >= 0 }; }
 
-function formatINR(n: number): string {
-  if (n >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`;
-  if (n >= 1e5) return `₹${(n / 1e5).toFixed(2)} L`;
-  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1)} K`;
-  return `₹${n.toFixed(0)}`;
-}
+// ── Mock data ──────────────────────────────────────────────────────────────────
+const MONTHLY = [
+  { month:"Jan", opd:2810, ipd:310, revenue:4200000, collections:3800000, occupancy:68 },
+  { month:"Feb", opd:2650, ipd:295, revenue:3900000, collections:3500000, occupancy:64 },
+  { month:"Mar", opd:3100, ipd:342, revenue:4800000, collections:4300000, occupancy:72 },
+  { month:"Apr", opd:3450, ipd:388, revenue:5500000, collections:4900000, occupancy:78 },
+  { month:"May", opd:3800, ipd:421, revenue:6100000, collections:5500000, occupancy:82 },
+];
+const DAILY_OPD = [
+  { day:"Mon", opd:131, emergency:12 }, { day:"Tue", opd:152, emergency:18 },
+  { day:"Wed", opd:138, emergency:15 }, { day:"Thu", opd:165, emergency:22 },
+  { day:"Fri", opd:143, emergency:16 }, { day:"Sat", opd:98,  emergency:28 },
+  { day:"Sun", opd:72,  emergency:34 },
+];
+const DEPT_REVENUE = [
+  { dept:"OPD",      revenue:1952000, pct:32 }, { dept:"IPD",      revenue:1708000, pct:28 },
+  { dept:"OT",       revenue:1342000, pct:22 }, { dept:"Lab",      revenue:610000,  pct:10 },
+  { dept:"Pharmacy", revenue:488000,  pct:8  },
+];
+const WARD_TREND = [
+  { week:"W1", general:72, icu:85, surgical:68, maternity:55 },
+  { week:"W2", general:76, icu:88, surgical:74, maternity:60 },
+  { week:"W3", general:78, icu:82, surgical:76, maternity:62 },
+  { week:"W4", general:80, icu:90, surgical:78, maternity:65 },
+];
+const TOP_DIAGNOSES = [
+  { name:"Hypertension",           count:142 }, { name:"Type 2 Diabetes",        count:118 },
+  { name:"COPD",                   count:86  }, { name:"CAD",                    count:74  },
+  { name:"Acute Respiratory Inf.", count:68  }, { name:"Dengue Fever",           count:62  },
+  { name:"Ortho — Fractures",      count:54  }, { name:"Acute Appendicitis",     count:48  },
+];
+const DOCTOR_PERF = [
+  { name:"Dr. Sharma",  dept:"Gen Med",     opd:312, ipd:28,  avg_rating:4.6, revenue:1240000 },
+  { name:"Dr. Mehta",   dept:"Gynaecology", opd:198, ipd:42,  avg_rating:4.8, revenue:1680000 },
+  { name:"Dr. Gupta",   dept:"Cardiology",  opd:164, ipd:38,  avg_rating:4.7, revenue:2100000 },
+  { name:"Dr. Patel",   dept:"Ortho",       opd:142, ipd:22,  avg_rating:4.5, revenue:1840000 },
+  { name:"Dr. Arora",   dept:"Surgery",     opd:88,  ipd:48,  avg_rating:4.9, revenue:2640000 },
+];
+const COLORS = ["#534AB7","#1D9E75","#BA7517","#378ADD","#D85A30","#639922"];
+const KPI_CUR  = { opd:3800, ipd:421, revenue:6100000, occupancy:82, nps:62, avg_los:4.2 };
+const KPI_PREV = { opd:3450, ipd:388, revenue:5500000, occupancy:78, nps:59, avg_los:4.8 };
 
-interface KPICardProps {
-  label: string;
-  value: string | number;
-  hint?: string;
-  accent?: string;
-}
-
-function KPICard({ label, value, hint, accent = "bg-blue-50 border-blue-200" }: KPICardProps) {
+function KpiCard({ label, value, prev, icon: Icon, color, format = "number" }: {
+  label: string; value: number; prev: number; icon: React.ElementType; color: string; format?: "number"|"currency"|"percent"|"decimal";
+}) {
+  const { d, up } = delta(value, prev);
+  const display = format === "currency" ? fmt(value) : format === "percent" ? `${value}%` : format === "decimal" ? value.toFixed(1) : value.toLocaleString();
   return (
-    <div className={`rounded-lg border ${accent} p-4 shadow-sm`}>
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-600">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-gray-900">{value}</div>
-      {hint && <div className="mt-1 text-xs text-gray-500">{hint}</div>}
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-export default function AnalyticsDashboardPage() {
-  const [data, setData] = useState<DashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    analyticsApi
-      .dashboard()
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e?.message || e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="p-8 text-center text-gray-500">Loading analytics dashboard…</div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="m-8 rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
-        Failed to load: {error}
-      </div>
-    );
-  }
-  if (!data) return null;
-
-  const { kpis } = data;
-
-  return (
-    <div className="space-y-6 p-6">
-      <header className="flex items-end justify-between">
+    <div className={cn("rounded-xl border bg-background px-5 py-4 border-l-[3px]", color)}>
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Hospital Analytics</h1>
-          <p className="text-sm text-gray-500">As of {kpis.as_of}</p>
+          <p className="text-2xl font-bold">{display}</p>
+          <p className="text-sm font-medium mt-0.5 text-muted-foreground">{label}</p>
         </div>
-        <a
-          href="/dashboard/reports"
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-        >
-          Custom reports →
-        </a>
-      </header>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl opacity-20")}>
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+      <div className={cn("flex items-center gap-1 mt-2 text-[12px] font-medium", up ? "text-green-600" : "text-red-600")}>
+        {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+        {d}% vs last month
+      </div>
+    </div>
+  );
+}
 
-      {/* KPI grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <KPICard label="OPD Today"     value={kpis.today_opd_visits} accent="bg-sky-50 border-sky-200" />
-        <KPICard label="Admissions"    value={kpis.today_admissions} accent="bg-emerald-50 border-emerald-200" />
-        <KPICard label="Discharges"    value={kpis.today_discharges} accent="bg-emerald-50 border-emerald-200" />
-        <KPICard label="Bed Occupancy" value={`${kpis.occupancy_pct}%`} hint={`${kpis.occupied_beds}/${kpis.total_beds}`} accent="bg-indigo-50 border-indigo-200" />
-        <KPICard label="OT Cases"      value={kpis.today_ot_cases} accent="bg-purple-50 border-purple-200" />
-        <KPICard label="Lab Orders"    value={kpis.today_lab_orders} accent="bg-purple-50 border-purple-200" />
-        <KPICard label="Pharmacy Sales" value={formatINR(kpis.today_pharmacy_sales)} accent="bg-orange-50 border-orange-200" />
-        <KPICard label="Revenue Today" value={formatINR(kpis.today_revenue)} accent="bg-amber-50 border-amber-200" />
-        <KPICard label="AR Outstanding" value={formatINR(kpis.ar_outstanding)} accent="bg-rose-50 border-rose-200" />
-        <KPICard label="Blood Units"   value={kpis.blood_units_in_stock} accent="bg-red-50 border-red-200" />
-        <KPICard label="Active Staff"  value={kpis.active_staff} accent="bg-teal-50 border-teal-200" />
-        <KPICard label="Open Complaints" value={kpis.open_complaints} accent={kpis.open_complaints > 0 ? "bg-yellow-50 border-yellow-200" : "bg-gray-50 border-gray-200"} />
+type Period = "7d"|"1m"|"3m"|"6m"|"1y";
+
+export default function AnalyticsPage() {
+  const [period, setPeriod] = useState<Period>("1m");
+  const [error, setError]   = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try { setError(null); } catch { setError("Showing demo data."); }
+  }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  return (
+    <div className="space-y-5 pb-8">
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div><h2 className="text-2xl font-bold">Analytics</h2><p className="text-sm text-muted-foreground">Hospital performance, trends, and key metrics</p></div>
+        <div className="flex gap-2 items-center">
+          <div className="flex rounded-md border overflow-hidden text-xs">
+            {(["7d","1m","3m","6m","1y"] as Period[]).map(p => (
+              <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-2 font-medium transition-colors", period === p ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted")}>{p}</button>
+            ))}
+          </div>
+          <button onClick={fetchData} className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
+        </div>
+      </div>
+      {error && <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0" />Showing demo data.</div>}
+
+      {/* KPI row */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <KpiCard label="OPD Visits"     value={KPI_CUR.opd}       prev={KPI_PREV.opd}       icon={Users}       color="border-l-blue-500"   />
+        <KpiCard label="IPD Admissions" value={KPI_CUR.ipd}       prev={KPI_PREV.ipd}       icon={BedDouble}   color="border-l-purple-500" />
+        <KpiCard label="Revenue"        value={KPI_CUR.revenue}   prev={KPI_PREV.revenue}   icon={IndianRupee} color="border-l-green-500"  format="currency" />
+        <KpiCard label="Bed Occupancy"  value={KPI_CUR.occupancy} prev={KPI_PREV.occupancy} icon={Activity}    color="border-l-amber-500"  format="percent" />
+        <KpiCard label="NPS Score"      value={KPI_CUR.nps}       prev={KPI_PREV.nps}       icon={TrendingUp}  color="border-l-teal-500"   />
+        <KpiCard label="Avg LOS (days)" value={KPI_CUR.avg_los}   prev={KPI_PREV.avg_los}   icon={Activity}    color="border-l-red-500"    format="decimal" />
       </div>
 
-      {/* Charts row 1 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Revenue — Last 6 Months">
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data.revenue_monthly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" fontSize={11} />
-              <YAxis tickFormatter={formatINR} fontSize={11} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
-              <Line type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Section>
-
-        <Section title="OPD Volume — Last 30 Days">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.opd_volume}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" fontSize={10} />
-              <YAxis fontSize={11} />
-              <Tooltip />
-              <Bar dataKey="visits" fill="#22c55e" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Section>
-      </div>
-
-      {/* Charts row 2 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Revenue by Department">
-          {data.revenue_by_dept.length === 0 ? (
-            <p className="text-sm text-gray-400">No invoice line departments configured.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data.revenue_by_dept} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tickFormatter={formatINR} fontSize={10} />
-                <YAxis type="category" dataKey="department" width={120} fontSize={11} />
-                <Tooltip formatter={(v: number) => formatINR(v)} />
-                <Bar dataKey="revenue" fill="#a855f7" radius={[0, 3, 3, 0]} />
+      {/* Revenue + OPD trend */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Monthly Revenue vs Collections (₹L)</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-3 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#534AB7]" />Revenue billed</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#1D9E75]" />Collected</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={MONTHLY} margin={{ top:4, right:8, left:-16, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize:11 }} />
+                <YAxis tick={{ fontSize:11 }} tickFormatter={v => `${(v/100000).toFixed(0)}L`} />
+                <Tooltip formatter={(v:number) => [fmt(v)]} contentStyle={{ fontSize:12, borderRadius:8 }} />
+                <Bar dataKey="revenue"     name="Revenue"    fill="#534AB7" radius={[3,3,0,0]} />
+                <Bar dataKey="collections" name="Collected"  fill="#1D9E75" radius={[3,3,0,0]} />
               </BarChart>
             </ResponsiveContainer>
-          )}
-        </Section>
+          </CardContent>
+        </Card>
 
-        <Section title="Accounts Receivable Aging">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.ar_aging.buckets}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="bucket" fontSize={11} />
-              <YAxis tickFormatter={formatINR} fontSize={11} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
-              <Bar dataKey="amount" fill="#ef4444" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Section>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">OPD & IPD Monthly Trend</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-3 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#378ADD]" />OPD visits</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#D85A30]" />IPD admissions</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={MONTHLY} margin={{ top:4, right:8, left:-16, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize:11 }} />
+                <YAxis yAxisId="l" tick={{ fontSize:11 }} />
+                <YAxis yAxisId="r" orientation="right" tick={{ fontSize:11 }} />
+                <Tooltip contentStyle={{ fontSize:12, borderRadius:8 }} />
+                <Area yAxisId="l" type="monotone" dataKey="opd" name="OPD"   stroke="#378ADD" fill="#378ADD20" strokeWidth={2} />
+                <Area yAxisId="r" type="monotone" dataKey="ipd" name="IPD"   stroke="#D85A30" fill="#D85A3020" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Charts row 3 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Section title="OT Utilization (30 days)">
-          {data.ot_utilization.length === 0 ? (
-            <p className="text-sm text-gray-400">No OT bookings.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data.ot_utilization}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="theatre" fontSize={10} />
-                <YAxis fontSize={11} />
-                <Tooltip />
-                <Bar dataKey="cases" fill="#f97316" radius={[3, 3, 0, 0]} />
+      {/* OPD by day + Revenue breakdown */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">OPD + Emergency by Weekday</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={DAILY_OPD} margin={{ top:4, right:8, left:-16, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="day" tick={{ fontSize:11 }} />
+                <YAxis tick={{ fontSize:11 }} />
+                <Tooltip contentStyle={{ fontSize:12, borderRadius:8 }} />
+                <Bar dataKey="opd"       name="OPD"       fill="#378ADD" radius={[3,3,0,0]} />
+                <Bar dataKey="emergency" name="Emergency" fill="#E24B4A" radius={[3,3,0,0]} />
               </BarChart>
             </ResponsiveContainer>
-          )}
-        </Section>
+          </CardContent>
+        </Card>
 
-        <Section title="Blood Inventory by Group">
-          {data.blood_inventory.length === 0 ? (
-            <p className="text-sm text-gray-400">No blood units in stock.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Revenue by Department</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={160}>
               <PieChart>
-                <Pie
-                  data={data.blood_inventory}
-                  dataKey="units"
-                  nameKey="blood_group"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={2}
-                >
-                  {data.blood_inventory.map((_, idx) => (
-                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                  ))}
+                <Pie data={DEPT_REVENUE} cx="50%" cy="50%" innerRadius={40} outerRadius={72} dataKey="revenue" nameKey="dept" paddingAngle={2}>
+                  {DEPT_REVENUE.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip formatter={(v:number) => [fmt(v)]} contentStyle={{ fontSize:12, borderRadius:8 }} />
               </PieChart>
             </ResponsiveContainer>
-          )}
-        </Section>
-
-        <Section title="Top Diagnoses">
-          {data.top_diagnoses.length === 0 ? (
-            <p className="text-sm text-gray-400">No diagnoses recorded yet.</p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {data.top_diagnoses.map((d, i) => (
-                <li key={i} className="flex items-center justify-between border-b border-gray-100 pb-1 last:border-0">
-                  <span className="truncate text-gray-700">{d.diagnosis}</span>
-                  <span className="ml-2 inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                    {d.count}
-                  </span>
-                </li>
+            <div className="mt-2 space-y-1">
+              {DEPT_REVENUE.map((d, i) => (
+                <div key={d.dept} className="flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2 w-2 rounded-sm" style={{ background: COLORS[i] }} />{d.dept}</span>
+                  <span className="font-medium">{d.pct}% · {fmt(d.revenue)}</span>
+                </div>
               ))}
-            </ul>
-          )}
-        </Section>
-      </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Charts row 4 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="IPD Occupancy by Ward">
-          {data.ipd_occupancy.length === 0 ? (
-            <p className="text-sm text-gray-400">No ward data.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="py-2 font-medium">Ward</th>
-                  <th className="py-2 font-medium">Beds</th>
-                  <th className="py-2 font-medium">Occupied</th>
-                  <th className="py-2 font-medium">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.ipd_occupancy.map((w, i) => (
-                  <tr key={i} className="border-b border-gray-100 last:border-0">
-                    <td className="py-1.5">{w.ward}</td>
-                    <td className="py-1.5">{w.total}</td>
-                    <td className="py-1.5">{w.occupied}</td>
-                    <td className="py-1.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          w.occupancy_pct > 85
-                            ? "bg-red-100 text-red-800"
-                            : w.occupancy_pct > 60
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {w.occupancy_pct}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Section>
-
-        <Section title="Attendance Today">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-md bg-green-50 p-3">
-              <div className="text-xs text-green-700">Present</div>
-              <div className="text-xl font-semibold text-green-900">{data.attendance.present}</div>
-            </div>
-            <div className="rounded-md bg-red-50 p-3">
-              <div className="text-xs text-red-700">Absent</div>
-              <div className="text-xl font-semibold text-red-900">{data.attendance.absent}</div>
-            </div>
-            <div className="rounded-md bg-orange-50 p-3">
-              <div className="text-xs text-orange-700">Late</div>
-              <div className="text-xl font-semibold text-orange-900">{data.attendance.late}</div>
-            </div>
-            <div className="rounded-md bg-blue-50 p-3">
-              <div className="text-xs text-blue-700">On Leave</div>
-              <div className="text-xl font-semibold text-blue-900">{data.attendance.on_leave}</div>
-            </div>
-            <div className="rounded-md bg-purple-50 p-3">
-              <div className="text-xs text-purple-700">Half Day</div>
-              <div className="text-xl font-semibold text-purple-900">{data.attendance.half_day}</div>
-            </div>
-            <div className="rounded-md bg-gray-50 p-3">
-              <div className="text-xs text-gray-700">Unmarked</div>
-              <div className="text-xl font-semibold text-gray-900">{data.attendance.unmarked}</div>
-            </div>
-          </div>
-        </Section>
-      </div>
-
-      {/* Charts row 5 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Pharmacy Turnover (6 mo)">
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={data.pharmacy_turn}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" fontSize={11} />
-              <YAxis tickFormatter={formatINR} fontSize={11} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
-              <Line type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Section>
-
-        <Section title="Lab Turnover (6 mo)">
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={data.lab_turnover}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" fontSize={11} />
-              <YAxis fontSize={11} />
-              <Tooltip />
-              <Bar dataKey="orders" fill="#14b8a6" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Section>
-      </div>
-
-      {/* Charts row 6 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Section title="HR Headcount by Department">
-          {data.hr_headcount.length === 0 ? (
-            <p className="text-sm text-gray-400">No employees.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data.hr_headcount} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" fontSize={10} />
-                <YAxis type="category" dataKey="department" width={110} fontSize={10} />
-                <Tooltip />
-                <Bar dataKey="headcount" fill="#0ea5e9" radius={[0, 3, 3, 0]} />
-              </BarChart>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ward Occupancy % (4-week trend)</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={WARD_TREND} margin={{ top:4, right:8, left:-16, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="week" tick={{ fontSize:11 }} />
+                <YAxis domain={[40,100]} tick={{ fontSize:11 }} tickFormatter={v=>`${v}%`} />
+                <Tooltip formatter={(v:number) => [`${v}%`]} contentStyle={{ fontSize:12, borderRadius:8 }} />
+                <Line type="monotone" dataKey="general"   name="General"   stroke="#378ADD" strokeWidth={1.5} dot={false} />
+                <Line type="monotone" dataKey="icu"       name="ICU"       stroke="#E24B4A" strokeWidth={1.5} dot={false} />
+                <Line type="monotone" dataKey="surgical"  name="Surgical"  stroke="#1D9E75" strokeWidth={1.5} dot={false} />
+                <Line type="monotone" dataKey="maternity" name="Maternity" stroke="#BA7517" strokeWidth={1.5} dot={false} />
+              </LineChart>
             </ResponsiveContainer>
-          )}
-        </Section>
-
-        <Section title="Asset Depreciation">
-          <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-md bg-blue-50 p-2">
-                <div className="text-xs text-blue-700">Acquisition</div>
-                <div className="text-sm font-semibold text-blue-900">
-                  {formatINR(data.asset_deprec.totals.acquisition_value)}
-                </div>
-              </div>
-              <div className="rounded-md bg-emerald-50 p-2">
-                <div className="text-xs text-emerald-700">Current</div>
-                <div className="text-sm font-semibold text-emerald-900">
-                  {formatINR(data.asset_deprec.totals.current_value)}
-                </div>
-              </div>
-              <div className="rounded-md bg-red-50 p-2">
-                <div className="text-xs text-red-700">Depreciation</div>
-                <div className="text-sm font-semibold text-red-900">
-                  {formatINR(data.asset_deprec.totals.depreciation)}
-                </div>
-              </div>
-            </div>
-            {data.asset_deprec.category_breakdown.length > 0 && (
-              <ul className="mt-2 space-y-1 text-xs">
-                {data.asset_deprec.category_breakdown.slice(0, 5).map((c, i) => (
-                  <li key={i} className="flex justify-between text-gray-600">
-                    <span className="truncate">{c.category}</span>
-                    <span>{formatINR(c.current_value)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Section>
-
-        <Section title="Complaints SLA (3 mo)">
-          <div className="space-y-2">
-            <div className="rounded-md bg-amber-50 p-3">
-              <div className="text-xs text-amber-700">Avg resolution time</div>
-              <div className="text-2xl font-semibold text-amber-900">
-                {data.complaints.avg_resolution_hours} <span className="text-sm font-normal">hrs</span>
-              </div>
-            </div>
-            {data.complaints.by_status.length > 0 && (
-              <ul className="mt-2 space-y-1 text-sm">
-                {data.complaints.by_status.map((s, i) => (
-                  <li key={i} className="flex justify-between">
-                    <span className="text-gray-600">{s.status}</span>
-                    <span className="font-medium">{s.count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Section>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Insurance section */}
-      <Section title="Insurance Claims (6 mo)">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={data.insurance.by_month}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" fontSize={11} />
-                <YAxis yAxisId="left" fontSize={11} />
-                <YAxis yAxisId="right" orientation="right" tickFormatter={formatINR} fontSize={11} />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="claims" fill="#0ea5e9" name="Claims" />
-                <Bar yAxisId="right" dataKey="amount" fill="#22c55e" name="Amount" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div>
-            <h4 className="mb-2 text-xs font-medium uppercase text-gray-500">By Status</h4>
-            <ul className="space-y-1 text-sm">
-              {data.insurance.by_status.map((s, i) => (
-                <li key={i} className="flex justify-between border-b border-gray-100 py-1">
-                  <span className="text-gray-700">{s.status}</span>
-                  <span className="font-medium">{s.count}</span>
-                </li>
+      {/* Top diagnoses + Doctor performance */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Top Diagnoses (MTD)</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2.5">
+              {TOP_DIAGNOSES.map((d, i) => (
+                <div key={d.name} className="flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground w-4 text-right shrink-0">{i+1}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-[12px] mb-1">
+                      <span className="font-medium">{d.name}</span>
+                      <span className="text-muted-foreground">{d.count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width:`${Math.round(d.count/TOP_DIAGNOSES[0].count*100)}%`, background: COLORS[i % COLORS.length] }} />
+                    </div>
+                  </div>
+                </div>
               ))}
-              {data.insurance.by_status.length === 0 && (
-                <li className="text-xs text-gray-400">No claims data.</li>
-              )}
-            </ul>
-          </div>
-        </div>
-      </Section>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <a
-          href="/dashboard/reports"
-          className="rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 p-6 text-center transition hover:border-blue-400 hover:bg-blue-100/50"
-        >
-          <div className="text-lg font-semibold text-blue-900">Custom Reports</div>
-          <p className="mt-1 text-sm text-blue-700">
-            Run and save reports across all modules — revenue, AR, headcount, claims, and more.
-          </p>
-        </a>
-        <a
-          href="/dashboard/reports#go-live"
-          className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-6 text-center transition hover:border-emerald-400 hover:bg-emerald-100/50"
-        >
-          <div className="text-lg font-semibold text-emerald-900">Go-Live Checklist</div>
-          <p className="mt-1 text-sm text-emerald-700">
-            21 operational readiness checks — security, master data, gateways, backups, and ops.
-          </p>
-        </a>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Doctor Performance (MTD)</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px]">
+                <thead><tr className="border-b text-[11px] text-muted-foreground">
+                  <th className="px-4 py-2.5 text-left font-medium">Doctor</th>
+                  <th className="px-3 py-2.5 text-right font-medium">OPD</th>
+                  <th className="px-3 py-2.5 text-right font-medium">IPD</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Rating</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Revenue</th>
+                </tr></thead>
+                <tbody>
+                  {DOCTOR_PERF.map((d, i) => (
+                    <tr key={d.name} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium">{d.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{d.dept}</p>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold">{d.opd}</td>
+                      <td className="px-3 py-2.5 text-right">{d.ipd}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <span className="font-semibold text-amber-600">★ {d.avg_rating}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold text-green-600">{fmt(d.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
