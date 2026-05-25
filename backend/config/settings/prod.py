@@ -14,7 +14,11 @@ SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)  # noqa
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://hapi.vexenlabs.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 # S3 / MinIO file storage
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")  # noqa

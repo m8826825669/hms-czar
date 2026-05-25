@@ -5,7 +5,7 @@
 // all api/*.ts modules: returns { data, status }.
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000/api/v1";
 
 interface QueryParams {
   [key: string]: string | number | boolean | undefined | null;
