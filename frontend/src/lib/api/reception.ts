@@ -1,36 +1,10 @@
-// lib/api/reception.ts
-import { useAuthStore } from "@/stores/auth-store";
+// frontend/src/lib/api/reception.ts
+"use client";
+import { api } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const ROOT = "/reception";
 
-function authHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
-}
-
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail ?? err?.message ?? `${res.status} ${res.statusText}`);
-  }
-  return res.json();
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type AppointmentStatus = "scheduled" | "checked_in" | "in_consultation" | "completed" | "cancelled" | "no_show";
 export type Gender = "M" | "F" | "O";
@@ -94,19 +68,83 @@ export interface VisitorPassForm {
   valid_hours:    number;
 }
 
-// ── API calls ─────────────────────────────────────────────────────────────────
+// ─── API calls ───────────────────────────────────────────────────────────────
+
+// Bucket-3 cleanup (May 2026): the original receptionApi had four methods that
+// called URLs the backend doesn't serve: `/patients/search/`, `/patients/register/`,
+// `/appointments/book/`, `/visitors/pass/`. They've been:
+//   - searchPatients   → rewired to /core/patients/?search=<q>, result mapped to flat shape
+//   - registerPatient  → rewired to POST /core/patients/, form mapped to Patient fields
+//   - bookAppointment  → deleted (no callers; create via POST /reception/appointments/)
+//   - issueVisitorPass → deleted (no callers; create via POST /reception/visitor-passes/)
+
+/** Shape of an item in the /core/patients/?search= response (full Patient serializer).
+ *  Only the fields we care about here; anything else is ignored. */
+interface CorePatient {
+  id:           number;
+  mrn:          string;
+  full_name:    string;
+  age:          number;
+  gender:       Gender;
+  phone:        string;
+  blood_group:  BloodGroup;
+}
 
 export const receptionApi = {
-  stats:          () => get<ReceptionStats>("/reception/stats/"),
-  todayAppointments:() => get<TodayAppointment[]>("/reception/appointments/today/"),
-  searchPatients: (q: string) => get<PatientSearchResult[]>(`/reception/patients/search/?q=${encodeURIComponent(q)}`),
-  registerPatient:(form: NewPatientForm) => post<{ mrn: string; id: number }>("/reception/patients/register/", form),
-  checkIn:        (id: number) => post<void>(`/reception/appointments/${id}/check-in/`, {}),
-  bookAppointment:(body: unknown) => post<{ id: number; token_number: number }>("/reception/appointments/book/", body),
-  issueVisitorPass:(form: VisitorPassForm) => post<{ pass_number: string }>("/reception/visitors/pass/", form),
+  stats: () =>
+    api.get<ReceptionStats>(`${ROOT}/stats/`).then(r => r.data),
+
+  todayAppointments: () =>
+    api.get<TodayAppointment[]>(`${ROOT}/appointments/today/`).then(r => r.data),
+
+  searchPatients: async (q: string): Promise<PatientSearchResult[]> => {
+    // /core/patients/ uses DRF SearchFilter on mrn/first_name/last_name/phone/abha_id
+    const r = await api.get<{ results: CorePatient[] } | CorePatient[]>(
+      "/core/patients/", { params: { search: q, page_size: 20 } },
+    );
+    const rows = Array.isArray(r.data) ? r.data : r.data.results;
+    return rows.map(p => ({
+      id:          p.id,
+      mrn:         p.mrn,
+      full_name:   p.full_name,
+      age:         p.age,
+      gender:      p.gender,
+      phone:       p.phone,
+      blood_group: p.blood_group,
+      // `last_visit` is not on the Patient model — backend doesn't surface it.
+      // Show null and let the UI render "—".
+      last_visit:  null,
+    }));
+  },
+
+  registerPatient: async (form: NewPatientForm): Promise<{ mrn: string; id: number }> => {
+    // Map the reception form to the Patient model field names.
+    const body: Record<string, unknown> = {
+      first_name:   form.first_name,
+      last_name:    form.last_name,
+      dob:          form.date_of_birth,
+      gender:       form.gender,
+      phone:        form.phone,
+      email:        form.email ?? "",
+      blood_group:  form.blood_group,
+      address_line1:form.address ?? "",
+      emergency_contact_name:  form.emergency_contact_name ?? "",
+      emergency_contact_phone: form.emergency_contact_phone ?? "",
+    };
+    // `allergies` on Patient is a JSONField (list of {substance, severity});
+    // the reception form passes a free-text string. Convert lazily.
+    if (form.allergies?.trim()) {
+      body.allergies = [{ substance: form.allergies.trim(), severity: "unknown" }];
+    }
+    const r = await api.post<{ id: number; mrn: string }>("/core/patients/", body);
+    return { mrn: r.data.mrn, id: r.data.id };
+  },
+
+  checkIn: (id: number) =>
+    api.post<void>(`${ROOT}/appointments/${id}/check-in/`).then(r => r.data),
 };
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+// ─── Mock data ───────────────────────────────────────────────────────────────
 
 export const RECEPTION_MOCK = {
   stats: {

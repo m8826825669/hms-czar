@@ -23,13 +23,13 @@ export default function RequisitionDetailPage() {
 
   const { data: req, isLoading } = useQuery<BloodRequisition>({
     queryKey: ["bb-req", id],
-    queryFn: async () => (await requisitionsApi.get(id)).data,
+    queryFn: async () => await requisitionsApi.get(id),
     enabled: !!id,
     refetchInterval: 15000,
   });
   const { data: compatibleBags = [] } = useQuery<BloodBag[]>({
     queryKey: ["bb-compatible", id],
-    queryFn: async () => (await requisitionsApi.compatibleBags(id)).data,
+    queryFn: async () => await requisitionsApi.compatibleBags(id),
     enabled: !!id && !!req && ["PENDING", "CROSSMATCH", "RESERVED"].includes(req.status),
   });
 

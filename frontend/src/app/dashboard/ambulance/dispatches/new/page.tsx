@@ -42,7 +42,7 @@ export default function NewDispatchPage() {
       notes,
     }),
     onSuccess: (resp) =>
-      router.push(`/dashboard/ambulance/dispatches/${resp.data.id}`),
+      router.push(`/dashboard/ambulance/dispatches/${resp.id}`),
   });
 
   return (

@@ -18,7 +18,7 @@ export default function TheatresPage() {
   const queryClient = useQueryClient();
   const { data: theatres = [], isLoading } = useQuery({
     queryKey: ["theatres-all"],
-    queryFn: async () => (await theatresApi.list()).data,
+    queryFn: async () => await theatresApi.list(),
   });
 
   const updateStatus = useMutation({

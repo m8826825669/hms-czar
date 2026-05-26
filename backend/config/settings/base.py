@@ -230,10 +230,48 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "HMS API",
-    "DESCRIPTION": "Hospital Management System REST API",
+    "DESCRIPTION": (
+        "Hospital Management System REST API.\n\n"
+        "**Auth**: JWT Bearer. POST `/api/v1/auth/login/` to get an `access` "
+        "token, then click the **Authorize** button above and paste it as "
+        "`Bearer <token>`.\n\n"
+        "**Multi-tenant**: every request is scoped to the user's hospital "
+        "via the `X-Hospital-Id` header (set automatically by the frontend "
+        "from the JWT)."
+    ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    # Sort tags alphabetically and group operations by the first path segment
+    # (so /api/v1/billing/* shows under "billing" etc.).
+    "SORT_OPERATIONS": True,
+    "TAGS": [],   # auto-derived from URL paths
+    # Use JWT in the security scheme so the Authorize button works.
+    "SECURITY": [{"jwtAuth": []}],
+    # Stable server entries so the "Try it out" button doesn't fail behind a
+    # reverse proxy. Override DJANGO_BACKEND_URL in prod env to expose the real host.
+    "SERVERS": [
+        {"url": "http://localhost:8000", "description": "Local dev"},
+    ],
+    # OPTIONAL: schema generation currently emits "Status009Enum" / "Priority1baEnum"
+    # style names because the same field name (status, priority, blood_group, shift)
+    # is used across many models with different choice sets. To get clean names like
+    # AppointmentStatusEnum / AdmissionStatusEnum, populate this dict with the
+    # canonical name → import path of each choices tuple. Example:
+    #   "AppointmentStatusEnum": "apps.reception.models.APPOINTMENT_STATUS_CHOICES",
+    # Skipping it now is harmless — the schema still works, just with auto-named enums.
+    "ENUM_NAME_OVERRIDES": {},
+    # SwaggerUI tweaks
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "filter": True,
+        "tagsSorter": "alpha",
+        "operationsSorter": "alpha",
+    },
+    # Skip endpoints that aren't part of the public API.
+    "SCHEMA_PATH_PREFIX": r"/api/v1/",
 }
 
 # ─── CORS ───────────────────────────────────────────────────

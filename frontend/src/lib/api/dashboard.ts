@@ -1,28 +1,10 @@
-// lib/api/dashboard.ts
-// All dashboard data fetched from Django backend
+// frontend/src/lib/api/dashboard.ts
+"use client";
+import { api } from "@/lib/api";
 
-import { useAuthStore } from "@/stores/auth-store";
+const ROOT = "/dashboard";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-
-function authHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: authHeaders(),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
-}
-
-// ── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
   opd_today:        number;
@@ -79,38 +61,46 @@ export interface DashboardAlert {
 }
 
 export interface MonthlyTrend {
-  month:         string;   // "Jan", "Feb" ...
+  month:         string;
   ipd_admissions:number;
   opd_visits:    number;
-  revenue:       number;   // in Lakhs
+  revenue:       number;
 }
 
 export interface OpdDailyCount {
-  date:       string;      // "2026-05-06"
+  date:       string;
   new_patients: number;
   followup:     number;
 }
 
 export interface RevenueBreakdown {
   label:      string;
-  value:      number;      // percentage
-  amount:     number;      // absolute ₹
+  value:      number;
+  amount:     number;
 }
 
-// ── API calls ────────────────────────────────────────────────────────────────
+// ─── API calls ───────────────────────────────────────────────────────────────
 
 export const dashboardApi = {
-  stats:           () => get<DashboardStats>("/dashboard/stats/"),
-  wardOccupancy:   () => get<WardOccupancy[]>("/dashboard/ward-occupancy/"),
-  recentOpd:       () => get<RecentOpdPatient[]>("/dashboard/recent-opd/"),
-  otSchedule:      () => get<OtScheduleEntry[]>("/dashboard/ot-schedule/"),
-  alerts:          () => get<DashboardAlert[]>("/dashboard/alerts/"),
-  monthlyTrend:    () => get<MonthlyTrend[]>("/dashboard/monthly-trend/"),
-  opdWeekly:       () => get<OpdDailyCount[]>("/dashboard/opd-weekly/"),
-  revenueBreakdown:() => get<RevenueBreakdown[]>("/dashboard/revenue-breakdown/"),
+  stats: () =>
+    api.get<DashboardStats>(`${ROOT}/stats/`).then(r => r.data),
+  wardOccupancy: () =>
+    api.get<WardOccupancy[]>(`${ROOT}/ward-occupancy/`).then(r => r.data),
+  recentOpd: () =>
+    api.get<RecentOpdPatient[]>(`${ROOT}/recent-opd/`).then(r => r.data),
+  otSchedule: () =>
+    api.get<OtScheduleEntry[]>(`${ROOT}/ot-schedule/`).then(r => r.data),
+  alerts: () =>
+    api.get<DashboardAlert[]>(`${ROOT}/alerts/`).then(r => r.data),
+  monthlyTrend: () =>
+    api.get<MonthlyTrend[]>(`${ROOT}/monthly-trend/`).then(r => r.data),
+  opdWeekly: () =>
+    api.get<OpdDailyCount[]>(`${ROOT}/opd-weekly/`).then(r => r.data),
+  revenueBreakdown: () =>
+    api.get<RevenueBreakdown[]>(`${ROOT}/revenue-breakdown/`).then(r => r.data),
 };
 
-// ── Fallback mock data (used while backend endpoint not yet implemented) ──────
+// ─── Fallback mock data ──────────────────────────────────────────────────────
 
 export const MOCK: {
   stats: DashboardStats;

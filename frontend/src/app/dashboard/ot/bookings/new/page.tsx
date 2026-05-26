@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { theatresApi, proceduresApi, bookingsApi } from "@/lib/api/ot";
-import { apiClient } from "@/lib/api/client";
+import { api } from "@/lib/api";
 
 interface Patient {
   id: number; mrn: string; first_name: string; last_name: string; phone: string;
@@ -20,16 +20,16 @@ export default function NewSurgeryBookingPage() {
 
   const { data: theatres = [] } = useQuery({
     queryKey: ["theatres-active"],
-    queryFn: async () => (await theatresApi.list()).data,
+    queryFn: async () => await theatresApi.list(),
   });
   const { data: procedures = [] } = useQuery({
     queryKey: ["procedures-active"],
-    queryFn: async () => (await proceduresApi.list({ is_active: "true" })).data,
+    queryFn: async () => await proceduresApi.list({ is_active: "true" }),
   });
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () =>
-      (await apiClient.get<Doctor[]>("/api/specialist/doctors/")).data,
+      (await api.get<Doctor[]>("/specialist/doctors/")).data,
   });
 
   // Patient search (debounced)
@@ -43,7 +43,7 @@ export default function NewSurgeryBookingPage() {
     }
     const handle = setTimeout(async () => {
       try {
-        const res = await apiClient.get<Patient[]>("/api/core/patients/", {
+        const res = await api.get<Patient[]>("/core/patients/", {
           params: { search: patientQuery },
         });
         setPatientResults(res.data.slice(0, 8));
@@ -109,7 +109,7 @@ export default function NewSurgeryBookingPage() {
       };
       if (admissionId) payload.admission = parseInt(admissionId, 10);
 
-      return (await bookingsApi.create(payload)).data;
+      return await bookingsApi.create(payload);
     },
     onSuccess: (b) => router.push(`/dashboard/ot/bookings/${b.id}`),
   });

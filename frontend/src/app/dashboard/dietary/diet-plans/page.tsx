@@ -15,7 +15,7 @@ const STATUS_CHIPS: Record<string, string> = {
 export default function DietPlansPage() {
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ["diet-plans"],
-    queryFn: async () => (await dietPlansApi.list()).data,
+    queryFn: async () => await dietPlansApi.list(),
   });
 
   if (isLoading) return <div className="p-8 text-slate-500">Loading…</div>;

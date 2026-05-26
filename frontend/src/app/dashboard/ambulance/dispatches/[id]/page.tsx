@@ -33,7 +33,7 @@ export default function DispatchDetailPage() {
 
   const { data: d, isLoading } = useQuery<Dispatch>({
     queryKey: ["dispatch", id],
-    queryFn: async () => (await dispatchesApi.get(id)).data,
+    queryFn: async () => await dispatchesApi.get(id),
     enabled: !!id,
     refetchInterval: 10000,
   });
@@ -232,11 +232,11 @@ function ActionPanel({ dispatch: d, onChange }: { dispatch: Dispatch; onChange: 
 function AssignForm({ dispatch, onChange }: { dispatch: Dispatch; onChange: () => void }) {
   const { data: ambulances = [] } = useQuery({
     queryKey: ["ambulances-available"],
-    queryFn: async () => (await ambulancesApi.available()).data,
+    queryFn: async () => await ambulancesApi.available(),
   });
   const { data: drivers = [] } = useQuery({
     queryKey: ["drivers-onduty"],
-    queryFn: async () => (await driversApi.onDuty()).data,
+    queryFn: async () => await driversApi.onDuty(),
   });
 
   const [ambId, setAmbId] = useState<number | "">("");

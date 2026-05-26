@@ -20,7 +20,7 @@ export default function NewDonationPage() {
     const handle = setTimeout(async () => {
       try {
         const r = await donorsApi.list({ search: donorQuery });
-        setResults(r.data.slice(0, 8));
+        setResults(r.slice(0, 8));
       } catch { setResults([]); }
     }, 300);
     return () => clearTimeout(handle);
@@ -57,7 +57,7 @@ export default function NewDonationPage() {
       notes,
     }),
     onSuccess: (resp) => {
-      setDonationId(resp.data.id);
+      setDonationId(resp.id);
       setShowScreen(true);
     },
   });

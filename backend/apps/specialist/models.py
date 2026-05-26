@@ -52,6 +52,10 @@ class Doctor(TenantBaseModel):
         help_text="Hashed PIN for prescription sign-off (set via separate endpoint)")
     is_consulting = models.BooleanField(default=True,
         help_text="Currently accepting patients")
+    on_call = models.BooleanField(default=False, db_index=True,
+        help_text="Available for after-hours / emergency calls. Toggled "
+                  "from the Specialist roster UI; orthogonal to is_consulting "
+                  "which is about routine OPD availability.")
 
     class Meta:
         ordering = ["user__first_name", "user__last_name"]

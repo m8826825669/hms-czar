@@ -1,36 +1,16 @@
-// lib/api/department.ts
-import { useAuthStore } from "@/stores/auth-store";
+// frontend/src/lib/api/department.ts
+"use client";
+import { api } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const ROOT = "/departments";
 
-function authHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(`${res.status}`);
-  const json = await res.json();
-  return (json?.results ?? json) as T;
-}
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
-  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.detail ?? `${res.status}`); }
-  return res.json();
-}
-async function patch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
-}
-async function del(path: string): Promise<void> {
-  await fetch(`${BASE}${path}`, { method: "DELETE", headers: authHeaders() });
+// Some endpoints return a paginated DRF response; unwrap either shape.
+async function unwrapList<T>(p: Promise<{ data: T[] | { results: T[] } }>): Promise<T[]> {
+  const r = await p;
+  return Array.isArray(r.data) ? r.data : (r.data as { results: T[] }).results;
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type DeptStatus = "active" | "inactive";
 
@@ -60,17 +40,25 @@ export interface DepartmentForm {
   beds:        number | "";
   status:      DeptStatus;
   description: string;
-  services:    string;       // comma-separated in form
+  services:    string;       // comma-separated in the form
 }
 
+// ─── API ─────────────────────────────────────────────────────────────────────
+
 export const departmentApi = {
-  list:   ()                      => get<Department[]>("/departments/"),
-  create: (b: DepartmentForm)     => post<Department>("/departments/", b),
-  update: (id: number, b: Partial<DepartmentForm>) => patch<Department>(`/departments/${id}/`, b),
-  delete: (id: number)            => del(`/departments/${id}/`),
+  list: () =>
+    unwrapList<Department>(
+      api.get<Department[] | { results: Department[] }>(`${ROOT}/`),
+    ),
+  create: (b: DepartmentForm) =>
+    api.post<Department>(`${ROOT}/`, b).then(r => r.data),
+  update: (id: number, b: Partial<DepartmentForm>) =>
+    api.patch<Department>(`${ROOT}/${id}/`, b).then(r => r.data),
+  delete: (id: number) =>
+    api.delete(`${ROOT}/${id}/`).then(() => undefined),
 };
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
+// ─── Mock data ───────────────────────────────────────────────────────────────
 
 export const DEPARTMENT_MOCK: Department[] = [
   {

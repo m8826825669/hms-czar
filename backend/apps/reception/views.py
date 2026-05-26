@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db import transaction
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Count, Q
 
 from apps.core.views import TenantScopedViewSetMixin
 from apps.notifications.tasks import send_template_notification
@@ -20,6 +21,34 @@ except ImportError:
     def broadcast_queue_event(*, hospital_id, payload, doctor_id=None):
         pass
 
+from .models import Appointment
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def reception_stats(request):
+    """
+    GET /api/v1/reception/stats/
+
+    Snapshot of today's reception counters. Used by the reception
+    dashboard's stat cards.
+    """
+    today = timezone.localdate()
+    hospital = getattr(request, "hospital", None)
+
+    qs = Appointment.objects.filter(scheduled_date=today)
+    if hospital:
+        qs = qs.filter(hospital=hospital)
+
+    counts = qs.aggregate(
+        appointments_today = Count("id"),
+        pending_checkin    = Count("id", filter=Q(status="scheduled")),
+        in_queue           = Count("id", filter=Q(status="checked_in")),
+        in_consultation    = Count("id", filter=Q(status="in_consultation")),
+        completed          = Count("id", filter=Q(status="completed")),
+        cancelled          = Count("id", filter=Q(status="cancelled")),
+    )
+    return Response(counts)
 
 class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Appointment.objects.select_related(
@@ -118,6 +147,31 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         appt.save(update_fields=["status", "cancelled_reason"])
         return Response(AppointmentSerializer(appt).data)
 
+
+# Inside AppointmentViewSet, alongside the existing `today` action:
+
+    @action(detail=False, methods=["get"], url_path="stats")
+    def stats(self, request):
+        """
+        GET /api/v1/reception/stats/
+
+        Returns a snapshot of today's reception counters.
+        """
+        today = timezone.localdate()
+        hospital = getattr(request, "hospital", None)
+        qs = Appointment.objects.filter(scheduled_date=today)
+        if hospital:
+            qs = qs.filter(hospital=hospital)
+
+        counts = qs.aggregate(
+            appointments_today = Count("id"),
+            pending_checkin    = Count("id", filter=Q(status="scheduled")),
+            in_queue           = Count("id", filter=Q(status="checked_in")),
+            in_consultation    = Count("id", filter=Q(status="in_consultation")),
+            completed          = Count("id", filter=Q(status="completed")),
+            cancelled          = Count("id", filter=Q(status="cancelled")),
+        )
+        return Response(counts)
 
 class QueueTokenViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = QueueToken.objects.select_related(

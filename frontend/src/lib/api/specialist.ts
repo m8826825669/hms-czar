@@ -1,48 +1,17 @@
-// lib/api/specialist.ts
-import { useAuthStore } from "@/stores/auth-store";
+// frontend/src/lib/api/specialist.ts
+"use client";
+import { api } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const ROOT = "/specialist";
 
-function authHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+// Some endpoints return a paginated DRF response; this helper unwraps either
+// `{ results: [...] }` (paginated) or a plain array.
+async function unwrapList<T>(p: Promise<{ data: T[] | { results: T[] } }>): Promise<T[]> {
+  const r = await p;
+  return Array.isArray(r.data) ? r.data : (r.data as { results: T[] }).results;
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const json = await res.json();
-  // Handle both { results: [] } (DRF pagination) and plain [] responses
-  return (json?.results ?? json) as T;
-}
-
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST", headers: authHeaders(), body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail ?? err?.message ?? `${res.status}`);
-  }
-  return res.json();
-}
-
-async function patch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "PATCH", headers: authHeaders(), body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
-}
-
-async function del(path: string): Promise<void> {
-  await fetch(`${BASE}${path}`, { method: "DELETE", headers: authHeaders() });
-}
-
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type DoctorStatus = "active" | "inactive" | "on_leave";
 
@@ -93,18 +62,32 @@ export interface DoctorForm {
   on_call:             boolean;
 }
 
-// ── API ────────────────────────────────────────────────────────────────────────
+// ─── API ─────────────────────────────────────────────────────────────────────
 
 export const specialistApi = {
-  list:       (q = "")   => get<Doctor[]>(`/specialist/doctors/${q ? `?search=${encodeURIComponent(q)}` : ""}`),
-  specialties:()         => get<Specialty[]>("/specialist/specialties/"),
-  create:     (b: DoctorForm)          => post<Doctor>("/specialist/doctors/", b),
-  update:     (id: number, b: Partial<DoctorForm>) => patch<Doctor>(`/specialist/doctors/${id}/`, b),
-  delete:     (id: number)             => del(`/specialist/doctors/${id}/`),
-  toggleOnCall:(id: number, v: boolean)=> patch<Doctor>(`/specialist/doctors/${id}/on-call/`, { on_call: v }),
+  list: (q = "") =>
+    unwrapList<Doctor>(
+      api.get<Doctor[] | { results: Doctor[] }>(`${ROOT}/doctors/`,
+        q ? { params: { search: q } } : undefined),
+    ),
+  specialties: () =>
+    unwrapList<Specialty>(
+      api.get<Specialty[] | { results: Specialty[] }>(`${ROOT}/specialties/`),
+    ),
+  create: (b: DoctorForm) =>
+    api.post<Doctor>(`${ROOT}/doctors/`, b).then(r => r.data),
+  update: (id: number, b: Partial<DoctorForm>) =>
+    api.patch<Doctor>(`${ROOT}/doctors/${id}/`, b).then(r => r.data),
+  delete: (id: number) =>
+    api.delete(`${ROOT}/doctors/${id}/`).then(() => undefined),
+  toggleOnCall: (id: number, v: boolean) =>
+    // Backend gained `on_call` as a regular Doctor field in migration
+    // 0002_doctor_on_call (May 2026). It's a standard partial update —
+    // no dedicated /on-call/ endpoint needed.
+    api.patch<Doctor>(`${ROOT}/doctors/${id}/`, { on_call: v }).then(r => r.data),
 };
 
-// ── Mock data (shown while Django isn't ready) ─────────────────────────────────
+// ─── Mock data (used as fallback when backend isn't ready) ────────────────────
 
 export const SPECIALIST_MOCK: Doctor[] = [
   {

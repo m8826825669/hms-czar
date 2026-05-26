@@ -3,10 +3,10 @@ import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/stores/auth-store";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000/api/v1";
 
 export const api = axios.create({
-  baseURL: `${BACKEND_URL}/api/v1`,
+  baseURL: `${BACKEND_URL}`,
   headers: { "Content-Type": "application/json" },
   timeout: 30_000,
 });
@@ -70,7 +70,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const res = await axios.post(`${BACKEND_URL}/api/v1/auth/refresh/`, {
+      const res = await axios.post(`${BACKEND_URL}/auth/refresh/`, {
         refresh,
       });
       const newAccess = res.data.access as string;

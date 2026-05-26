@@ -22,7 +22,7 @@ export default function DonorsPage() {
       const params: Record<string, string> = {};
       if (search) params.search = search;
       if (groupFilter) params.blood_group = groupFilter;
-      return (await donorsApi.list(params)).data;
+      return await donorsApi.list(params);
     },
   });
 

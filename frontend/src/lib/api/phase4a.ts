@@ -1,4 +1,6 @@
-import { apiClient } from "@/lib/api/client";
+// frontend/src/lib/api/phase4a.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   StoreLocation, StockItem, StockBatch, Supplier,
   PurchaseOrder, StockRequisition, StockSummaryRow,
@@ -6,106 +8,134 @@ import type {
   HKZone, HKStaff, HKTaskTemplate, HKTaskAssignment, HKTodaySummary,
 } from "@/types/phase4a";
 
-// ═══ Inventory ═══
+// ─── Inventory ───────────────────────────────────────────────────────────────
+const INV = "/inventory";
+
 export const storesApi = {
-  list: () => apiClient.get<StoreLocation[]>("/api/inventory/stores/"),
+  list: () =>
+    api.get<StoreLocation[]>(`${INV}/stores/`).then(r => r.data),
 };
+
 export const stockItemsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<StockItem[]>("/api/inventory/items/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<StockItem[]>(`${INV}/items/`, { params }).then(r => r.data),
 };
+
 export const stockBatchesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<StockBatch[]>("/api/inventory/batches/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<StockBatch[]>(`${INV}/batches/`, { params }).then(r => r.data),
 };
+
 export const suppliersApi = {
-  list: () => apiClient.get<Supplier[]>("/api/inventory/suppliers/"),
+  list: () =>
+    api.get<Supplier[]>(`${INV}/suppliers/`).then(r => r.data),
 };
+
 export const purchaseOrdersApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<PurchaseOrder[]>("/api/inventory/purchase-orders/", { params }),
-  get: (id: number) => apiClient.get<PurchaseOrder>(`/api/inventory/purchase-orders/${id}/`),
-  create: (data: any) =>
-    apiClient.post<PurchaseOrder>("/api/inventory/purchase-orders/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<PurchaseOrder[]>(`${INV}/purchase-orders/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<PurchaseOrder>(`${INV}/purchase-orders/${id}/`).then(r => r.data),
+  create: (data: Partial<PurchaseOrder>) =>
+    api.post<PurchaseOrder>(`${INV}/purchase-orders/`, data).then(r => r.data),
   submit: (id: number) =>
-    apiClient.post<PurchaseOrder>(`/api/inventory/purchase-orders/${id}/submit/`),
+    api.post<PurchaseOrder>(`${INV}/purchase-orders/${id}/submit/`).then(r => r.data),
   approve: (id: number) =>
-    apiClient.post<PurchaseOrder>(`/api/inventory/purchase-orders/${id}/approve/`),
+    api.post<PurchaseOrder>(`${INV}/purchase-orders/${id}/approve/`).then(r => r.data),
 };
+
 export const requisitionsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<StockRequisition[]>("/api/inventory/requisitions/", { params }),
-  get: (id: number) => apiClient.get<StockRequisition>(`/api/inventory/requisitions/${id}/`),
-  create: (data: any) =>
-    apiClient.post<StockRequisition>("/api/inventory/requisitions/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<StockRequisition[]>(`${INV}/requisitions/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<StockRequisition>(`${INV}/requisitions/${id}/`).then(r => r.data),
+  create: (data: Partial<StockRequisition>) =>
+    api.post<StockRequisition>(`${INV}/requisitions/`, data).then(r => r.data),
   approve: (id: number, line_approvals?: Record<number, string>) =>
-    apiClient.post<StockRequisition>(`/api/inventory/requisitions/${id}/approve/`,
-                                       { line_approvals }),
-  issue: (id: number, data: any) =>
-    apiClient.post(`/api/inventory/requisitions/${id}/issue/`, data),
+    api.post<StockRequisition>(`${INV}/requisitions/${id}/approve/`,
+      { line_approvals }).then(r => r.data),
+  issue: (id: number, data: Record<string, unknown>) =>
+    api.post(`${INV}/requisitions/${id}/issue/`, data).then(r => r.data),
 };
+
 export const stockSummaryApi = {
-  get: (params?: Record<string, string>) =>
-    apiClient.get<{ summary: StockSummaryRow[] }>("/api/inventory/stock-summary/",
-                                                     { params }),
+  get: (params?: Record<string, unknown>) =>
+    api.get<{ summary: StockSummaryRow[] }>(`${INV}/stock-summary/`, { params }).then(r => r.data),
   expiring: (days: number = 30) =>
-    apiClient.get<StockBatch[]>("/api/inventory/expiring-soon/",
-                                  { params: { days: String(days) } }),
+    api.get<StockBatch[]>(`${INV}/expiring-soon/`,
+      { params: { days: String(days) } }).then(r => r.data),
 };
 
+// ─── Assets ──────────────────────────────────────────────────────────────────
+const ASSETS = "/assets";
 
-// ═══ Assets ═══
 export const assetCategoriesApi = {
-  list: () => apiClient.get<AssetCategory[]>("/api/assets/categories/"),
+  list: () =>
+    api.get<AssetCategory[]>(`${ASSETS}/categories/`).then(r => r.data),
 };
+
 export const assetsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Asset[]>("/api/assets/assets/", { params }),
-  get: (id: number) => apiClient.get<Asset>(`/api/assets/assets/${id}/`),
-  create: (data: any) => apiClient.post<Asset>("/api/assets/assets/", data),
-  scheduleMaintenance: (id: number, data: any) =>
-    apiClient.post<AssetMaintenanceLog>(
-      `/api/assets/assets/${id}/schedule-maintenance/`, data),
-  dispose: (id: number, data: any) =>
-    apiClient.post(`/api/assets/assets/${id}/dispose/`, data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Asset[]>(`${ASSETS}/assets/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<Asset>(`${ASSETS}/assets/${id}/`).then(r => r.data),
+  create: (data: Partial<Asset>) =>
+    api.post<Asset>(`${ASSETS}/assets/`, data).then(r => r.data),
+  scheduleMaintenance: (id: number, data: Record<string, unknown>) =>
+    api.post<AssetMaintenanceLog>(
+      `${ASSETS}/assets/${id}/schedule-maintenance/`, data).then(r => r.data),
+  dispose: (id: number, data: Record<string, unknown>) =>
+    api.post(`${ASSETS}/assets/${id}/dispose/`, data).then(r => r.data),
 };
+
 export const maintenanceLogsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<AssetMaintenanceLog[]>("/api/assets/maintenance-logs/", { params }),
-  complete: (id: number, data: any) =>
-    apiClient.post<AssetMaintenanceLog>(
-      `/api/assets/maintenance-logs/${id}/complete/`, data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<AssetMaintenanceLog[]>(`${ASSETS}/maintenance-logs/`, { params }).then(r => r.data),
+  complete: (id: number, data: Record<string, unknown>) =>
+    api.post<AssetMaintenanceLog>(
+      `${ASSETS}/maintenance-logs/${id}/complete/`, data).then(r => r.data),
 };
+
 export const assetMetricsApi = {
-  get: () => apiClient.get<AssetMetrics>("/api/assets/metrics/"),
+  get: () =>
+    api.get<AssetMetrics>(`${ASSETS}/metrics/`).then(r => r.data),
 };
 
+// ─── Housekeeping ────────────────────────────────────────────────────────────
+const HK = "/housekeeping";
 
-// ═══ Housekeeping ═══
 export const hkZonesApi = {
-  list: () => apiClient.get<HKZone[]>("/api/housekeeping/zones/"),
+  list: () =>
+    api.get<HKZone[]>(`${HK}/zones/`).then(r => r.data),
 };
+
 export const hkStaffApi = {
-  list: () => apiClient.get<HKStaff[]>("/api/housekeeping/staff/"),
+  list: () =>
+    api.get<HKStaff[]>(`${HK}/staff/`).then(r => r.data),
 };
+
 export const hkTemplatesApi = {
-  list: () => apiClient.get<HKTaskTemplate[]>("/api/housekeeping/task-templates/"),
+  list: () =>
+    api.get<HKTaskTemplate[]>(`${HK}/task-templates/`).then(r => r.data),
 };
+
 export const hkAssignmentsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<HKTaskAssignment[]>("/api/housekeeping/task-assignments/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<HKTaskAssignment[]>(`${HK}/task-assignments/`, { params }).then(r => r.data),
   start: (id: number) =>
-    apiClient.post<HKTaskAssignment>(`/api/housekeeping/task-assignments/${id}/start/`),
+    api.post<HKTaskAssignment>(`${HK}/task-assignments/${id}/start/`).then(r => r.data),
   complete: (id: number, notes?: string) =>
-    apiClient.post<HKTaskAssignment>(
-      `/api/housekeeping/task-assignments/${id}/complete/`, { notes }),
-  inspect: (id: number, data: any) =>
-    apiClient.post<HKTaskAssignment>(
-      `/api/housekeeping/task-assignments/${id}/inspect/`, data),
+    api.post<HKTaskAssignment>(
+      `${HK}/task-assignments/${id}/complete/`, { notes }).then(r => r.data),
+  inspect: (id: number, data: Record<string, unknown>) =>
+    api.post<HKTaskAssignment>(
+      `${HK}/task-assignments/${id}/inspect/`, data).then(r => r.data),
 };
+
 export const hkTodayApi = {
-  summary: () => apiClient.get<HKTodaySummary>("/api/housekeeping/today-summary/"),
+  summary: () =>
+    api.get<HKTodaySummary>(`${HK}/today-summary/`).then(r => r.data),
   generate: (date?: string) =>
-    apiClient.post<{ created: number; date: string }>(
-      "/api/housekeeping/generate-daily-tasks/", date ? { date } : {}),
+    api.post<{ created: number; date: string }>(
+      `${HK}/generate-daily-tasks/`, date ? { date } : {}).then(r => r.data),
 };

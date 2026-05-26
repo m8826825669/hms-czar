@@ -1,83 +1,55 @@
-import { apiClient } from "./client";
+// frontend/src/lib/api/phase4d.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   DashboardPayload, KPICards, ReportType, SavedReport, ReportRun,
   ReportRunResult, GoLiveReport,
 } from "@/types/phase4d";
 
-const root = "/api/analytics";
+const ROOT = "/analytics";
 
 export const analyticsApi = {
-  dashboard: async () => {
-    const { data } = await apiClient.get<DashboardPayload>(`${root}/dashboard/`);
-    return data;
-  },
+  dashboard: () =>
+    api.get<DashboardPayload>(`${ROOT}/dashboard/`).then(r => r.data),
 
-  kpis: async () => {
-    const { data } = await apiClient.get<KPICards>(`${root}/kpis/`);
-    return data;
-  },
+  kpis: () =>
+    api.get<KPICards>(`${ROOT}/kpis/`).then(r => r.data),
 
-  widget: async <T = unknown>(metric: string, params?: Record<string, string | number>) => {
-    const query = params
-      ? "?" + new URLSearchParams(
-          Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
-        ).toString()
-      : "";
-    const { data } = await apiClient.get<{ metric: string; data: T }>(
-      `${root}/widget/${metric}/${query}`
-    );
-    return data;
-  },
+  widget: <T = unknown>(metric: string, params?: Record<string, string | number>) =>
+    api.get<{ metric: string; data: T }>(`${ROOT}/widget/${metric}/`, { params })
+       .then(r => r.data),
 
-  reportTypes: async () => {
-    const { data } = await apiClient.get<ReportType[]>(`${root}/report-types/`);
-    return data;
-  },
+  reportTypes: () =>
+    api.get<ReportType[]>(`${ROOT}/report-types/`).then(r => r.data),
 
-  runReport: async <T = unknown>(reportType: string, parameters: Record<string, unknown> = {}) => {
-    const { data } = await apiClient.post<ReportRunResult<T>>(`${root}/run-report/`, {
+  runReport: <T = unknown>(reportType: string, parameters: Record<string, unknown> = {}) =>
+    api.post<ReportRunResult<T>>(`${ROOT}/run-report/`, {
       report_type: reportType,
       parameters,
-    });
-    return data;
-  },
+    }).then(r => r.data),
 
-  savedReports: async () => {
-    const { data } = await apiClient.get<SavedReport[] | { results: SavedReport[] }>(
-      `${root}/saved-reports/`
-    );
-    return Array.isArray(data) ? data : data.results;
-  },
+  savedReports: () =>
+    api.get<SavedReport[] | { results: SavedReport[] }>(`${ROOT}/saved-reports/`)
+       .then(r => Array.isArray(r.data) ? r.data : r.data.results),
 
-  createSavedReport: async (payload: Partial<SavedReport>) => {
-    const { data } = await apiClient.post<SavedReport>(`${root}/saved-reports/`, payload);
-    return data;
-  },
+  createSavedReport: (payload: Partial<SavedReport>) =>
+    api.post<SavedReport>(`${ROOT}/saved-reports/`, payload).then(r => r.data),
 
-  updateSavedReport: async (id: number, payload: Partial<SavedReport>) => {
-    const { data } = await apiClient.patch<SavedReport>(`${root}/saved-reports/${id}/`, payload);
-    return data;
-  },
+  updateSavedReport: (id: number, payload: Partial<SavedReport>) =>
+    api.patch<SavedReport>(`${ROOT}/saved-reports/${id}/`, payload).then(r => r.data),
 
-  deleteSavedReport: async (id: number) => {
-    await apiClient.delete(`${root}/saved-reports/${id}/`);
-  },
+  deleteSavedReport: (id: number) =>
+    api.delete(`${ROOT}/saved-reports/${id}/`).then(() => undefined),
 
-  runSavedReport: async <T = unknown>(id: number) => {
-    const { data } = await apiClient.post<ReportRunResult<T> & { report: SavedReport }>(
-      `${root}/saved-reports/${id}/run/`,
-      {}
-    );
-    return data;
-  },
+  runSavedReport: <T = unknown>(id: number) =>
+    api.post<ReportRunResult<T> & { report: SavedReport }>(
+      `${ROOT}/saved-reports/${id}/run/`, {},
+    ).then(r => r.data),
 
-  runHistory: async () => {
-    const { data } = await apiClient.get<ReportRun[] | { results: ReportRun[] }>(`${root}/runs/`);
-    return Array.isArray(data) ? data : data.results;
-  },
+  runHistory: () =>
+    api.get<ReportRun[] | { results: ReportRun[] }>(`${ROOT}/runs/`)
+       .then(r => Array.isArray(r.data) ? r.data : r.data.results),
 
-  goLiveChecklist: async () => {
-    const { data } = await apiClient.get<GoLiveReport>(`${root}/go-live-checklist/`);
-    return data;
-  },
+  goLiveChecklist: () =>
+    api.get<GoLiveReport>(`${ROOT}/go-live-checklist/`).then(r => r.data),
 };

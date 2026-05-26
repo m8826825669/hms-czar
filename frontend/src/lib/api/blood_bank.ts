@@ -1,93 +1,99 @@
-import { apiClient } from "@/lib/api/client";
+// frontend/src/lib/api/blood_bank.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   BloodDonor, BloodDonation, BloodBag,
   BloodRequisition, CrossMatch, BloodIssue,
   InventorySummary,
 } from "@/types/blood_bank";
 
+// All paths are relative to `${BACKEND_URL}/api/v1` (the api instance's baseURL).
+// Never include `/api` or `/v1` prefixes in the path strings below.
+const ROOT = "/blood-bank";
 
+// ─── Donors ──────────────────────────────────────────────────────────────────
 export const donorsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<BloodDonor[]>("/api/blood-bank/donors/", { params }),
-  get: (id: number) => apiClient.get<BloodDonor>(`/api/blood-bank/donors/${id}/`),
-  create: (data: any) =>
-    apiClient.post<BloodDonor>("/api/blood-bank/donors/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<BloodDonor[]>(`${ROOT}/donors/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<BloodDonor>(`${ROOT}/donors/${id}/`).then(r => r.data),
+  create: (data: Partial<BloodDonor>) =>
+    api.post<BloodDonor>(`${ROOT}/donors/`, data).then(r => r.data),
   update: (id: number, data: Partial<BloodDonor>) =>
-    apiClient.patch<BloodDonor>(`/api/blood-bank/donors/${id}/`, data),
+    api.patch<BloodDonor>(`${ROOT}/donors/${id}/`, data).then(r => r.data),
   eligibility: (id: number) =>
-    apiClient.get<{ can_donate: boolean; reason: string }>(
-      `/api/blood-bank/donors/${id}/eligibility/`,
-    ),
+    api.get<{ can_donate: boolean; reason: string }>(
+      `${ROOT}/donors/${id}/eligibility/`,
+    ).then(r => r.data),
 };
 
+// ─── Donations ───────────────────────────────────────────────────────────────
 export const donationsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<BloodDonation[]>("/api/blood-bank/donations/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<BloodDonation[]>(`${ROOT}/donations/`, { params }).then(r => r.data),
   get: (id: number) =>
-    apiClient.get<BloodDonation>(`/api/blood-bank/donations/${id}/`),
-  create: (data: any) =>
-    apiClient.post<BloodDonation>("/api/blood-bank/donations/", data),
+    api.get<BloodDonation>(`${ROOT}/donations/${id}/`).then(r => r.data),
+  create: (data: Partial<BloodDonation>) =>
+    api.post<BloodDonation>(`${ROOT}/donations/`, data).then(r => r.data),
   screen: (id: number, data: {
     test_hiv: string; test_hbsag: string; test_hcv: string;
     test_syphilis: string; test_malaria: string;
     components?: string[]; storage_location?: string;
     discard_reason?: string;
-  }) => apiClient.post<BloodDonation>(
-    `/api/blood-bank/donations/${id}/screen/`, data,
-  ),
+  }) =>
+    api.post<BloodDonation>(`${ROOT}/donations/${id}/screen/`, data).then(r => r.data),
 };
 
+// ─── Bags ────────────────────────────────────────────────────────────────────
 export const bagsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<BloodBag[]>("/api/blood-bank/bags/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<BloodBag[]>(`${ROOT}/bags/`, { params }).then(r => r.data),
   get: (id: number) =>
-    apiClient.get<BloodBag>(`/api/blood-bank/bags/${id}/`),
+    api.get<BloodBag>(`${ROOT}/bags/${id}/`).then(r => r.data),
   discard: (id: number, reason: string) =>
-    apiClient.post<BloodBag>(`/api/blood-bank/bags/${id}/discard/`, { reason }),
+    api.post<BloodBag>(`${ROOT}/bags/${id}/discard/`, { reason }).then(r => r.data),
 };
 
+// ─── Requisitions ────────────────────────────────────────────────────────────
 export const requisitionsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<BloodRequisition[]>("/api/blood-bank/requisitions/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<BloodRequisition[]>(`${ROOT}/requisitions/`, { params }).then(r => r.data),
   get: (id: number) =>
-    apiClient.get<BloodRequisition>(`/api/blood-bank/requisitions/${id}/`),
-  create: (data: any) =>
-    apiClient.post<BloodRequisition>("/api/blood-bank/requisitions/", data),
+    api.get<BloodRequisition>(`${ROOT}/requisitions/${id}/`).then(r => r.data),
+  create: (data: Partial<BloodRequisition>) =>
+    api.post<BloodRequisition>(`${ROOT}/requisitions/`, data).then(r => r.data),
   pending: () =>
-    apiClient.get<BloodRequisition[]>("/api/blood-bank/requisitions/pending/"),
+    api.get<BloodRequisition[]>(`${ROOT}/requisitions/pending/`).then(r => r.data),
   compatibleBags: (id: number) =>
-    apiClient.get<BloodBag[]>(
-      `/api/blood-bank/requisitions/${id}/compatible-bags/`,
-    ),
+    api.get<BloodBag[]>(`${ROOT}/requisitions/${id}/compatible-bags/`).then(r => r.data),
   crossmatch: (id: number, data: {
     bag_id: number; result: "COMPATIBLE" | "INCOMPATIBLE"; notes?: string;
-  }) => apiClient.post<CrossMatch>(
-    `/api/blood-bank/requisitions/${id}/crossmatch/`, data,
-  ),
+  }) =>
+    api.post<CrossMatch>(`${ROOT}/requisitions/${id}/crossmatch/`, data).then(r => r.data),
   reserve: (id: number, bag_id: number) =>
-    apiClient.post<BloodRequisition>(
-      `/api/blood-bank/requisitions/${id}/reserve/`, { bag_id },
-    ),
+    api.post<BloodRequisition>(`${ROOT}/requisitions/${id}/reserve/`, { bag_id }).then(r => r.data),
   issueBag: (id: number, data: {
     bag_id: number; issued_to_dept?: string; received_by_name?: string;
     create_invoice?: boolean; unit_price?: string; gst_rate?: string;
-  }) => apiClient.post<BloodIssue>(
-    `/api/blood-bank/requisitions/${id}/issue-bag/`, data,
-  ),
+  }) =>
+    api.post<BloodIssue>(`${ROOT}/requisitions/${id}/issue-bag/`, data).then(r => r.data),
 };
 
+// ─── Issues ──────────────────────────────────────────────────────────────────
 export const issuesApi = {
-  list: () => apiClient.get<BloodIssue[]>("/api/blood-bank/issues/"),
+  list: () =>
+    api.get<BloodIssue[]>(`${ROOT}/issues/`).then(r => r.data),
   completeTransfusion: (id: number, data: {
     started_at?: string; completed_at?: string;
     reactions?: string; bag_returned?: boolean;
-  }) => apiClient.post<BloodIssue>(
-    `/api/blood-bank/issues/${id}/complete-transfusion/`, data,
-  ),
+  }) =>
+    api.post<BloodIssue>(`${ROOT}/issues/${id}/complete-transfusion/`, data).then(r => r.data),
 };
 
+// ─── Inventory ───────────────────────────────────────────────────────────────
 export const inventoryApi = {
-  summary: () => apiClient.get<InventorySummary>("/api/blood-bank/inventory/"),
+  summary: () =>
+    api.get<InventorySummary>(`${ROOT}/inventory/`).then(r => r.data),
   expireOldBags: () =>
-    apiClient.post<{ expired_count: number }>("/api/blood-bank/expire-old-bags/"),
+    api.post<{ expired_count: number }>(`${ROOT}/expire-old-bags/`).then(r => r.data),
 };

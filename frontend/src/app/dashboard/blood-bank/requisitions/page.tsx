@@ -27,8 +27,8 @@ export default function RequisitionsPage() {
   const { data: requisitions = [] } = useQuery({
     queryKey: ["bb-requisitions", tab],
     queryFn: async () => {
-      if (tab === "pending") return (await requisitionsApi.pending()).data;
-      return (await requisitionsApi.list()).data;
+      if (tab === "pending") return await requisitionsApi.pending();
+      return await requisitionsApi.list();
     },
   });
 

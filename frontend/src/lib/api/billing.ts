@@ -1,3 +1,4 @@
+// frontend/src/lib/api/billing.ts
 "use client";
 import axios from "axios";
 import { api } from "@/lib/api";
@@ -7,27 +8,32 @@ import type {
 } from "@/types/billing";
 import type { Paginated } from "@/types/hms";
 
+const ROOT = "/billing";
+
+// ─── Services (catalogue) ────────────────────────────────────────────────────
 export const servicesApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<Service>>("/billing/services/", { params }).then(r => r.data),
+    api.get<Paginated<Service>>(`${ROOT}/services/`, { params }).then(r => r.data),
   search: (q: string) =>
-    api.get<Paginated<Service>>("/billing/services/", { params: { search: q, page_size: 20 } })
-       .then(r => r.data.results),
+    api.get<Paginated<Service>>(`${ROOT}/services/`, {
+      params: { search: q, page_size: 20 },
+    }).then(r => r.data.results),
   get: (id: number) =>
-    api.get<Service>(`/billing/services/${id}/`).then(r => r.data),
+    api.get<Service>(`${ROOT}/services/${id}/`).then(r => r.data),
   create: (data: Partial<Service>) =>
-    api.post<Service>("/billing/services/", data).then(r => r.data),
+    api.post<Service>(`${ROOT}/services/`, data).then(r => r.data),
   update: (id: number, data: Partial<Service>) =>
-    api.patch<Service>(`/billing/services/${id}/`, data).then(r => r.data),
+    api.patch<Service>(`${ROOT}/services/${id}/`, data).then(r => r.data),
   delete: (id: number) =>
-    api.delete(`/billing/services/${id}/`).then(r => r.data),
+    api.delete(`${ROOT}/services/${id}/`).then(() => undefined),
 };
 
+// ─── Invoices ────────────────────────────────────────────────────────────────
 export const invoicesApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<Invoice>>("/billing/invoices/", { params }).then(r => r.data),
+    api.get<Paginated<Invoice>>(`${ROOT}/invoices/`, { params }).then(r => r.data),
   get: (id: number) =>
-    api.get<Invoice>(`/billing/invoices/${id}/`).then(r => r.data),
+    api.get<Invoice>(`${ROOT}/invoices/${id}/`).then(r => r.data),
   today: () =>
     api.get<{
       date: string;
@@ -37,21 +43,23 @@ export const invoicesApi = {
       total_due: string;
       by_status: Record<string, number>;
       invoices: Invoice[];
-    }>("/billing/invoices/today/").then(r => r.data),
+    }>(`${ROOT}/invoices/today/`).then(r => r.data),
   create: (data: Partial<Invoice>) =>
-    api.post<Invoice>("/billing/invoices/", data).then(r => r.data),
+    api.post<Invoice>(`${ROOT}/invoices/`, data).then(r => r.data),
   addItem: (invoiceId: number, item: Partial<InvoiceItem>) =>
-    api.post<Invoice>(`/billing/invoices/${invoiceId}/add-item/`, item).then(r => r.data),
+    api.post<Invoice>(`${ROOT}/invoices/${invoiceId}/add-item/`, item).then(r => r.data),
   removeItem: (invoiceId: number, itemId: number) =>
-    api.post<Invoice>(`/billing/invoices/${invoiceId}/remove-item/${itemId}/`).then(r => r.data),
+    api.post<Invoice>(`${ROOT}/invoices/${invoiceId}/remove-item/${itemId}/`).then(r => r.data),
   finalize: (id: number) =>
-    api.post<Invoice>(`/billing/invoices/${id}/finalize/`).then(r => r.data),
+    api.post<Invoice>(`${ROOT}/invoices/${id}/finalize/`).then(r => r.data),
   cancel: (id: number, reason: string) =>
-    api.post<Invoice>(`/billing/invoices/${id}/cancel/`, { reason }).then(r => r.data),
+    api.post<Invoice>(`${ROOT}/invoices/${id}/cancel/`, { reason }).then(r => r.data),
   payCash: (id: number, data: { amount: number; method: string; reference?: string; notes?: string }) =>
-    api.post<{ invoice: Invoice; payment: Payment }>(`/billing/invoices/${id}/pay-cash/`, data).then(r => r.data),
+    api.post<{ invoice: Invoice; payment: Payment }>(
+      `${ROOT}/invoices/${id}/pay-cash/`, data,
+    ).then(r => r.data),
   payOnline: (id: number) =>
-    api.post<RazorpayInitResponse>(`/billing/invoices/${id}/pay-online/`).then(r => r.data),
+    api.post<RazorpayInitResponse>(`${ROOT}/invoices/${id}/pay-online/`).then(r => r.data),
   verifyPayment: (data: {
     invoice_id: number;
     razorpay_order_id: string;
@@ -59,13 +67,14 @@ export const invoicesApi = {
     razorpay_signature: string;
   }) =>
     api.post<{ verified: boolean; invoice: Invoice; payment: Payment }>(
-      "/billing/payments/verify/", data
+      `${ROOT}/payments/verify/`, data,
     ).then(r => r.data),
   printUrl: (id: number) =>
-    `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"}/api/v1/billing/invoices/${id}/print/`,
+    `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"}/api/v1${ROOT}/invoices/${id}/print/`,
 };
 
-// Public (no-auth) endpoints — uses raw axios, no JWT header
+// ─── Public (no-auth) endpoints ──────────────────────────────────────────────
+// Uses a separate axios instance so the JWT interceptor doesn't run.
 const publicAxios = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"}/api/v1/public`,
 });

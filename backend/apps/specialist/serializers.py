@@ -61,7 +61,7 @@ class DoctorSerializer(serializers.ModelSerializer):
             "qualifications", "qualification_codes",
             "primary_department", "department_name",
             "bio", "years_of_experience", "languages",
-            "signature", "is_consulting", "is_active",
+            "signature", "is_consulting", "on_call", "is_active",
             "created_at",
         )
         read_only_fields = ("created_at",)

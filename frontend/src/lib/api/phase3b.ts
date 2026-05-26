@@ -1,4 +1,6 @@
-import { apiClient } from "@/lib/api/client";
+// frontend/src/lib/api/phase3b.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   Ambulance, AmbulanceDriver, Dispatch,
   DietType, MealItem, DietPlan, PatientMeal, KitchenSummary,
@@ -6,119 +8,143 @@ import type {
   CylinderType, Cylinder, CylinderInventory,
 } from "@/types/phase3b";
 
-// ═══════════════════════════════════════════════
-// Ambulance
-// ═══════════════════════════════════════════════
+// ─── Ambulance ───────────────────────────────────────────────────────────────
+const AMB = "/ambulance";
+
 export const ambulancesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Ambulance[]>("/api/ambulance/ambulances/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Ambulance[]>(`${AMB}/ambulances/`, { params }).then(r => r.data),
   available: () =>
-    apiClient.get<Ambulance[]>("/api/ambulance/ambulances/available/"),
-  get: (id: number) => apiClient.get<Ambulance>(`/api/ambulance/ambulances/${id}/`),
-  create: (data: any) => apiClient.post<Ambulance>("/api/ambulance/ambulances/", data),
+    api.get<Ambulance[]>(`${AMB}/ambulances/available/`).then(r => r.data),
+  get: (id: number) =>
+    api.get<Ambulance>(`${AMB}/ambulances/${id}/`).then(r => r.data),
+  create: (data: Partial<Ambulance>) =>
+    api.post<Ambulance>(`${AMB}/ambulances/`, data).then(r => r.data),
   update: (id: number, data: Partial<Ambulance>) =>
-    apiClient.patch<Ambulance>(`/api/ambulance/ambulances/${id}/`, data),
+    api.patch<Ambulance>(`${AMB}/ambulances/${id}/`, data).then(r => r.data),
 };
 
 export const driversApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<AmbulanceDriver[]>("/api/ambulance/drivers/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<AmbulanceDriver[]>(`${AMB}/drivers/`, { params }).then(r => r.data),
   onDuty: () =>
-    apiClient.get<AmbulanceDriver[]>("/api/ambulance/drivers/on_duty/"),
+    api.get<AmbulanceDriver[]>(`${AMB}/drivers/on_duty/`).then(r => r.data),
 };
 
 export const dispatchesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Dispatch[]>("/api/ambulance/dispatches/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Dispatch[]>(`${AMB}/dispatches/`, { params }).then(r => r.data),
   active: () =>
-    apiClient.get<Dispatch[]>("/api/ambulance/dispatches/active/"),
-  get: (id: number) => apiClient.get<Dispatch>(`/api/ambulance/dispatches/${id}/`),
-  create: (data: any) => apiClient.post<Dispatch>("/api/ambulance/dispatches/", data),
+    api.get<Dispatch[]>(`${AMB}/dispatches/active/`).then(r => r.data),
+  get: (id: number) =>
+    api.get<Dispatch>(`${AMB}/dispatches/${id}/`).then(r => r.data),
+  create: (data: Partial<Dispatch>) =>
+    api.post<Dispatch>(`${AMB}/dispatches/`, data).then(r => r.data),
   assign: (id: number, data: { ambulance_id: number; driver_id?: number; paramedic_id?: number }) =>
-    apiClient.post<Dispatch>(`/api/ambulance/dispatches/${id}/assign/`, data),
+    api.post<Dispatch>(`${AMB}/dispatches/${id}/assign/`, data).then(r => r.data),
   updateStatus: (id: number, data: { new_status: string; lat?: string; lng?: string; note?: string }) =>
-    apiClient.post<Dispatch>(`/api/ambulance/dispatches/${id}/update-status/`, data),
+    api.post<Dispatch>(`${AMB}/dispatches/${id}/update-status/`, data).then(r => r.data),
   cancel: (id: number, reason: string) =>
-    apiClient.post<Dispatch>(`/api/ambulance/dispatches/${id}/cancel/`, { reason }),
+    api.post<Dispatch>(`${AMB}/dispatches/${id}/cancel/`, { reason }).then(r => r.data),
   bill: (id: number, data: { distance_km: string; gst_rate?: string }) =>
-    apiClient.post<Dispatch>(`/api/ambulance/dispatches/${id}/bill/`, data),
+    api.post<Dispatch>(`${AMB}/dispatches/${id}/bill/`, data).then(r => r.data),
 };
 
+// ─── Dietary ─────────────────────────────────────────────────────────────────
+const DIET = "/dietary";
 
-// ═══════════════════════════════════════════════
-// Dietary
-// ═══════════════════════════════════════════════
 export const dietTypesApi = {
-  list: () => apiClient.get<DietType[]>("/api/dietary/diet-types/"),
+  list: () =>
+    api.get<DietType[]>(`${DIET}/diet-types/`).then(r => r.data),
 };
+
 export const mealItemsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<MealItem[]>("/api/dietary/meal-items/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<MealItem[]>(`${DIET}/meal-items/`, { params }).then(r => r.data),
 };
+
 export const dietPlansApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<DietPlan[]>("/api/dietary/diet-plans/", { params }),
-  get: (id: number) => apiClient.get<DietPlan>(`/api/dietary/diet-plans/${id}/`),
-  create: (data: any) => apiClient.post<DietPlan>("/api/dietary/diet-plans/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<DietPlan[]>(`${DIET}/diet-plans/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<DietPlan>(`${DIET}/diet-plans/${id}/`).then(r => r.data),
+  create: (data: Partial<DietPlan>) =>
+    api.post<DietPlan>(`${DIET}/diet-plans/`, data).then(r => r.data),
   generateMeals: (id: number, date?: string) =>
-    apiClient.post(`/api/dietary/diet-plans/${id}/generate-meals/`, { date }),
+    api.post(`${DIET}/diet-plans/${id}/generate-meals/`, { date }).then(r => r.data),
   setNpo: (id: number, npo_until: string | null, npo_reason: string = "") =>
-    apiClient.post(`/api/dietary/diet-plans/${id}/set-npo/`, { npo_until, npo_reason }),
+    api.post(`${DIET}/diet-plans/${id}/set-npo/`, { npo_until, npo_reason }).then(r => r.data),
 };
+
 export const patientMealsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<PatientMeal[]>("/api/dietary/patient-meals/", { params }),
-  updateStatus: (id: number, data: any) =>
-    apiClient.post<PatientMeal>(`/api/dietary/patient-meals/${id}/update-status/`, data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<PatientMeal[]>(`${DIET}/patient-meals/`, { params }).then(r => r.data),
+  updateStatus: (id: number, data: Record<string, unknown>) =>
+    api.post<PatientMeal>(`${DIET}/patient-meals/${id}/update-status/`, data).then(r => r.data),
 };
+
 export const kitchenApi = {
   today: (date?: string) =>
-    apiClient.get<KitchenSummary>("/api/dietary/kitchen-today/", {
+    api.get<KitchenSummary>(`${DIET}/kitchen-today/`, {
       params: date ? { date } : undefined,
-    }),
+    }).then(r => r.data),
   generateAll: (date?: string) =>
-    apiClient.post<{ created: number; date: string }>(
-      "/api/dietary/generate-all-meals/", date ? { date } : {},
-    ),
+    api.post<{ created: number; date: string }>(
+      `${DIET}/generate-all-meals/`, date ? { date } : {},
+    ).then(r => r.data),
 };
 
+// ─── Laundry ─────────────────────────────────────────────────────────────────
+const LAUNDRY = "/laundry";
 
-// ═══════════════════════════════════════════════
-// Laundry
-// ═══════════════════════════════════════════════
 export const linenItemsApi = {
-  list: () => apiClient.get<LinenItem[]>("/api/laundry/items/"),
+  list: () =>
+    api.get<LinenItem[]>(`${LAUNDRY}/items/`).then(r => r.data),
 };
+
 export const laundryBatchesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<LaundryBatch[]>("/api/laundry/batches/", { params }),
-  get: (id: number) => apiClient.get<LaundryBatch>(`/api/laundry/batches/${id}/`),
-  create: (data: any) =>
-    apiClient.post<LaundryBatch>("/api/laundry/batches/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<LaundryBatch[]>(`${LAUNDRY}/batches/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<LaundryBatch>(`${LAUNDRY}/batches/${id}/`).then(r => r.data),
+  create: (data: Partial<LaundryBatch>) =>
+    api.post<LaundryBatch>(`${LAUNDRY}/batches/`, data).then(r => r.data),
+  // sendToLaundry / receiveBack are wrappers over the single backend
+  // `transition` action. The backend status enum:
+  //   CREATED → PICKED_UP → WASHING → READY → RETURNED
+  // "Send to laundry" = mark PICKED_UP; "receive back" = mark RETURNED.
+  // Any extra `data` keys are forwarded for forward-compat (e.g. damage
+  // notes once the backend transition view accepts more than new_status).
   sendToLaundry: (id: number) =>
-    apiClient.post<LaundryBatch>(`/api/laundry/batches/${id}/send-to-laundry/`),
-  receiveBack: (id: number, data: any) =>
-    apiClient.post<LaundryBatch>(`/api/laundry/batches/${id}/receive-back/`, data),
+    api.post<LaundryBatch>(`${LAUNDRY}/batches/${id}/transition/`,
+      { new_status: "PICKED_UP" }).then(r => r.data),
+  receiveBack: (id: number, data: Record<string, unknown> = {}) =>
+    api.post<LaundryBatch>(`${LAUNDRY}/batches/${id}/transition/`,
+      { new_status: "RETURNED", ...data }).then(r => r.data),
 };
 
+// ─── Gas Cylinder ────────────────────────────────────────────────────────────
+const CYL = "/gas-cylinder";
 
-// ═══════════════════════════════════════════════
-// Gas Cylinder
-// ═══════════════════════════════════════════════
 export const cylinderTypesApi = {
-  list: () => apiClient.get<CylinderType[]>("/api/gas-cylinder/cylinder-types/"),
+  list: () =>
+    api.get<CylinderType[]>(`${CYL}/cylinder-types/`).then(r => r.data),
 };
+
 export const cylindersApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Cylinder[]>("/api/gas-cylinder/cylinders/", { params }),
-  get: (id: number) => apiClient.get<Cylinder>(`/api/gas-cylinder/cylinders/${id}/`),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Cylinder[]>(`${CYL}/cylinders/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<Cylinder>(`${CYL}/cylinders/${id}/`).then(r => r.data),
   issue: (id: number, data: { department_id?: number; location?: string; received_by?: string }) =>
-    apiClient.post<Cylinder>(`/api/gas-cylinder/cylinders/${id}/issue/`, data),
+    api.post<Cylinder>(`${CYL}/cylinders/${id}/issue/`, data).then(r => r.data),
   returnCyl: (id: number, data: { fill_percentage: number; notes?: string }) =>
-    apiClient.post<Cylinder>(`/api/gas-cylinder/cylinders/${id}/return/`, data),
-  addInspection: (id: number, data: any) =>
-    apiClient.post(`/api/gas-cylinder/cylinders/${id}/add-inspection/`, data),
+    api.post<Cylinder>(`${CYL}/cylinders/${id}/return/`, data).then(r => r.data),
+  addInspection: (id: number, data: Record<string, unknown>) =>
+    api.post(`${CYL}/cylinders/${id}/add-inspection/`, data).then(r => r.data),
 };
+
 export const cylinderInventoryApi = {
-  summary: () => apiClient.get<CylinderInventory>("/api/gas-cylinder/inventory/"),
+  summary: () =>
+    api.get<CylinderInventory>(`${CYL}/inventory/`).then(r => r.data),
 };

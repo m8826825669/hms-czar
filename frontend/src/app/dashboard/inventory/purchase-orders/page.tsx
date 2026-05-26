@@ -22,7 +22,7 @@ export default function PurchaseOrdersPage() {
 
   const { data: pos = [] } = useQuery({
     queryKey: ["purchase-orders"],
-    queryFn: async () => (await purchaseOrdersApi.list()).data,
+    queryFn: async () => await purchaseOrdersApi.list(),
   });
 
   const submit = useMutation({

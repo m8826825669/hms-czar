@@ -1,5 +1,11 @@
+// frontend/src/lib/api/reports.ts
 "use client";
 import { api } from "@/lib/api";
+
+const BILL = "/billing";
+const SPC  = "/specialist";
+
+// ─── GST report types ────────────────────────────────────────────────────────
 
 export interface GSTR1Row {
   place_of_supply: string;
@@ -71,20 +77,22 @@ export interface GSTR3BReport {
   };
 }
 
+// ─── GST API ─────────────────────────────────────────────────────────────────
+
 export const gstApi = {
   gstr1: (year: number, month: number) =>
-    api.get<GSTR1Report>("/billing/gst/gstr1/", { params: { year, month } })
+    api.get<GSTR1Report>(`${BILL}/gst/gstr1/`, { params: { year, month } })
        .then(r => r.data),
 
   gstr3b: (year: number, month: number) =>
-    api.get<GSTR3BReport>("/billing/gst/gstr3b/", { params: { year, month } })
+    api.get<GSTR3BReport>(`${BILL}/gst/gstr3b/`, { params: { year, month } })
        .then(r => r.data),
 
   workbookUrl: (year: number, month: number) =>
-    `/api/billing/gst/workbook/?year=${year}&month=${month}`,
+    `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"}/api/v1${BILL}/gst/workbook/?year=${year}&month=${month}`,
 };
 
-// ─────────────────────────────── Doctor dashboard ──────────────────────────────
+// ─── Doctor dashboard ────────────────────────────────────────────────────────
 
 export interface DoctorDashboard {
   as_of: string;
@@ -133,7 +141,7 @@ export interface DoctorDashboard {
 
 export const doctorDashboardApi = {
   today: (doctorId?: number) =>
-    api.get<DoctorDashboard>("/specialist/dashboard/today/", {
+    api.get<DoctorDashboard>(`${SPC}/dashboard/today/`, {
       params: doctorId ? { doctor_id: doctorId } : {},
     }).then(r => r.data),
 };

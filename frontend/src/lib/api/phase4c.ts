@@ -1,56 +1,76 @@
-import { apiClient } from "@/lib/api/client";
+// frontend/src/lib/api/phase4c.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   InsuranceCompany, TPA, PolicyCoverage, PreAuth, Claim,
   Vaccine, VaccinationRecord,
   TicketCategory, Ticket, NPSResponse,
-  ComplaintsDashboard, InsuranceDashboard,
+  TicketsDashboard, InsuranceDashboard,
 } from "@/types/phase4c";
 
-// Insurance
+// ─── Insurance ───────────────────────────────────────────────────────────────
+const INS = "/insurance";
+
 export const insuranceCompaniesApi = {
-  list: () => apiClient.get<InsuranceCompany[]>("/api/insurance/companies/"),
-};
-export const tpasApi = {
-  list: () => apiClient.get<TPA[]>("/api/insurance/tpas/"),
-};
-export const policiesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<PolicyCoverage[]>("/api/insurance/policies/", { params }),
-  create: (data: any) => apiClient.post<PolicyCoverage>("/api/insurance/policies/", data),
-};
-export const preAuthsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<PreAuth[]>("/api/insurance/pre-auths/", { params }),
-  create: (data: any) => apiClient.post<PreAuth>("/api/insurance/pre-auths/", data),
-  approve: (id: number, data: any) =>
-    apiClient.post(`/api/insurance/pre-auths/${id}/approve/`, data),
-  reject: (id: number, reason: string) =>
-    apiClient.post(`/api/insurance/pre-auths/${id}/reject/`, { reason }),
-};
-export const claimsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Claim[]>("/api/insurance/claims/", { params }),
-  create: (data: any) => apiClient.post<Claim>("/api/insurance/claims/", data),
-  settle: (id: number, data: any) =>
-    apiClient.post(`/api/insurance/claims/${id}/settle/`, data),
-};
-export const insuranceDashboardApi = {
-  get: () => apiClient.get<InsuranceDashboard>("/api/insurance/dashboard/"),
+  list: () =>
+    api.get<InsuranceCompany[]>(`${INS}/companies/`).then(r => r.data),
 };
 
-// Vaccination
+export const tpasApi = {
+  list: () =>
+    api.get<TPA[]>(`${INS}/tpas/`).then(r => r.data),
+};
+
+export const policiesApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<PolicyCoverage[]>(`${INS}/policies/`, { params }).then(r => r.data),
+  create: (data: Partial<PolicyCoverage>) =>
+    api.post<PolicyCoverage>(`${INS}/policies/`, data).then(r => r.data),
+};
+
+export const preAuthsApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<PreAuth[]>(`${INS}/pre-auths/`, { params }).then(r => r.data),
+  create: (data: Partial<PreAuth>) =>
+    api.post<PreAuth>(`${INS}/pre-auths/`, data).then(r => r.data),
+  approve: (id: number, data: Record<string, unknown>) =>
+    api.post(`${INS}/pre-auths/${id}/approve/`, data).then(r => r.data),
+  reject: (id: number, reason: string) =>
+    api.post(`${INS}/pre-auths/${id}/reject/`, { reason }).then(r => r.data),
+};
+
+export const claimsApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<Claim[]>(`${INS}/claims/`, { params }).then(r => r.data),
+  create: (data: Partial<Claim>) =>
+    api.post<Claim>(`${INS}/claims/`, data).then(r => r.data),
+  settle: (id: number, data: Record<string, unknown>) =>
+    api.post(`${INS}/claims/${id}/settle/`, data).then(r => r.data),
+};
+
+export const insuranceDashboardApi = {
+  get: () =>
+    api.get<InsuranceDashboard>(`${INS}/dashboard/`).then(r => r.data),
+};
+
+// ─── Vaccination ─────────────────────────────────────────────────────────────
+const VAC = "/vaccination";
+
 export const vaccinesApi = {
-  list: () => apiClient.get<Vaccine[]>("/api/vaccination/vaccines/"),
+  list: () =>
+    api.get<Vaccine[]>(`${VAC}/vaccines/`).then(r => r.data),
 };
+
 export const vaccinationRecordsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<VaccinationRecord[]>("/api/vaccination/records/", { params }),
-  create: (data: any) =>
-    apiClient.post<VaccinationRecord>("/api/vaccination/records/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<VaccinationRecord[]>(`${VAC}/records/`, { params }).then(r => r.data),
+  create: (data: Partial<VaccinationRecord>) =>
+    api.post<VaccinationRecord>(`${VAC}/records/`, data).then(r => r.data),
 };
+
 export const patientVaccinationApi = {
   history: (patientId: number) =>
-    apiClient.get<{
+    api.get<{
       patient_id: number;
       patient_name: string;
       history: VaccinationRecord[];
@@ -61,35 +81,46 @@ export const patientVaccinationApi = {
         due_age: string;
         overdue_days: number;
       }>;
-    }>(`/api/vaccination/patient/${patientId}/history/`),
+    }>(`${VAC}/patient/${patientId}/history/`).then(r => r.data),
 };
 
-// Complaints
+// ─── Complaints ──────────────────────────────────────────────────────────────
+const CMP = "/complaints";
+
 export const ticketCategoriesApi = {
-  list: () => apiClient.get<TicketCategory[]>("/api/complaints/categories/"),
+  list: () =>
+    api.get<TicketCategory[]>(`${CMP}/categories/`).then(r => r.data),
 };
+
 export const ticketsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Ticket[]>("/api/complaints/tickets/", { params }),
-  get: (id: number) => apiClient.get<Ticket>(`/api/complaints/tickets/${id}/`),
-  create: (data: any) => apiClient.post<Ticket>("/api/complaints/tickets/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Ticket[]>(`${CMP}/tickets/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<Ticket>(`${CMP}/tickets/${id}/`).then(r => r.data),
+  create: (data: Partial<Ticket>) =>
+    api.post<Ticket>(`${CMP}/tickets/`, data).then(r => r.data),
   assign: (id: number, user_id: number) =>
-    apiClient.post(`/api/complaints/tickets/${id}/assign/`, { user_id }),
-  addComment: (id: number, data: any) =>
-    apiClient.post(`/api/complaints/tickets/${id}/add-comment/`, data),
+    api.post(`${CMP}/tickets/${id}/assign/`, { user_id }).then(r => r.data),
+  addComment: (id: number, data: Record<string, unknown>) =>
+    api.post(`${CMP}/tickets/${id}/add-comment/`, data).then(r => r.data),
   resolve: (id: number, resolution: string) =>
-    apiClient.post(`/api/complaints/tickets/${id}/resolve/`, { resolution }),
+    api.post(`${CMP}/tickets/${id}/resolve/`, { resolution }).then(r => r.data),
   close: (id: number, satisfaction_rating?: number) =>
-    apiClient.post(`/api/complaints/tickets/${id}/close/`,
-                     { satisfaction_rating }),
+    api.post(`${CMP}/tickets/${id}/close/`, { satisfaction_rating }).then(r => r.data),
   reopen: (id: number, reason: string) =>
-    apiClient.post(`/api/complaints/tickets/${id}/reopen/`, { reason }),
+    api.post(`${CMP}/tickets/${id}/reopen/`, { reason }).then(r => r.data),
 };
+
 export const npsApi = {
-  list: () => apiClient.get<NPSResponse[]>("/api/complaints/nps/"),
-  submit: (data: any) => apiClient.post<NPSResponse>("/api/complaints/nps/", data),
+  list: () =>
+    api.get<NPSResponse[]>(`${CMP}/nps/`).then(r => r.data),
+  submit: (data: Partial<NPSResponse>) =>
+    api.post<NPSResponse>(`${CMP}/nps/`, data).then(r => r.data),
 };
+
 export const complaintsDashboardApi = {
-  get: () => apiClient.get<ComplaintsDashboard>("/api/complaints/tickets-dashboard/"),
-  npsMetrics: () => apiClient.get("/api/complaints/nps-metrics/"),
+  get: () =>
+    api.get<TicketsDashboard>(`${CMP}/tickets-dashboard/`).then(r => r.data),
+  npsMetrics: () =>
+    api.get(`${CMP}/nps-metrics/`).then(r => r.data),
 };

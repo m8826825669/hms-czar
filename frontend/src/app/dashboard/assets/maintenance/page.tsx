@@ -11,7 +11,7 @@ export default function MaintenanceLogsPage() {
 
   const { data: logs = [] } = useQuery({
     queryKey: ["maintenance-logs"],
-    queryFn: async () => (await maintenanceLogsApi.list()).data,
+    queryFn: async () => await maintenanceLogsApi.list(),
   });
 
   const complete = useMutation({

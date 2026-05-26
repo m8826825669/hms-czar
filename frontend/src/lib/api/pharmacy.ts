@@ -1,3 +1,4 @@
+// frontend/src/lib/api/pharmacy.ts
 "use client";
 import { api } from "@/lib/api";
 import type {
@@ -6,27 +7,35 @@ import type {
 } from "@/types/pharmacy";
 import type { Paginated } from "@/types/hms";
 
+const PHX = "/pharmacy";
+// NOTE: backend mounts at /api/v1/departments/ and the router now registers
+// at "" — so the canonical URL is /departments/, not /department/departments/.
+const DEPT = "/departments";
+
+// ─── Departments (kept here for backward compat) ─────────────────────────────
 export const departmentsApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<Department>>("/department/departments/", { params }).then(r => r.data),
+    api.get<Paginated<Department>>(`${DEPT}/`, { params }).then(r => r.data),
   get: (id: number) =>
-    api.get<Department>(`/department/departments/${id}/`).then(r => r.data),
+    api.get<Department>(`${DEPT}/${id}/`).then(r => r.data),
   create: (data: Partial<Department>) =>
-    api.post<Department>("/department/departments/", data).then(r => r.data),
+    api.post<Department>(`${DEPT}/`, data).then(r => r.data),
   update: (id: number, data: Partial<Department>) =>
-    api.patch<Department>(`/department/departments/${id}/`, data).then(r => r.data),
+    api.patch<Department>(`${DEPT}/${id}/`, data).then(r => r.data),
 };
 
+// ─── Batches ─────────────────────────────────────────────────────────────────
 export const batchesApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<DrugBatch>>("/pharmacy/batches/", { params }).then(r => r.data),
+    api.get<Paginated<DrugBatch>>(`${PHX}/batches/`, { params }).then(r => r.data),
   search: (q: string) =>
-    api.get<Paginated<DrugBatch>>("/pharmacy/batches/", { params: { search: q, page_size: 30 } })
+    api.get<Paginated<DrugBatch>>(`${PHX}/batches/`, { params: { search: q, page_size: 30 } })
        .then(r => r.data.results),
   get: (id: number) =>
-    api.get<DrugBatch>(`/pharmacy/batches/${id}/`).then(r => r.data),
+    api.get<DrugBatch>(`${PHX}/batches/${id}/`).then(r => r.data),
 };
 
+// ─── Stock movements & availability ──────────────────────────────────────────
 export const stockApi = {
   receive: (data: {
     drug_id: number;
@@ -42,58 +51,58 @@ export const stockApi = {
     gst_rate?: number;
     notes?: string;
   }) =>
-    api.post<DrugBatch>("/pharmacy/receive-stock/", data).then(r => r.data),
+    api.post<DrugBatch>(`${PHX}/receive-stock/`, data).then(r => r.data),
 
   availability: (drugId: number) =>
-    api.get<AvailabilityResponse>(`/pharmacy/drugs/${drugId}/availability/`).then(r => r.data),
+    api.get<AvailabilityResponse>(`${PHX}/drugs/${drugId}/availability/`).then(r => r.data),
 
   allocatePreview: (drugId: number, qty: number) =>
-    api.post("/pharmacy/allocate-preview/", { drug_id: drugId, qty })
-       .then(r => r.data as {
-         allocations: Array<{
-           batch_id: number; batch_no: string; expiry_date: string;
-           available: number; take: number; mrp: string;
-         }>;
-         shortfall: number;
-         total_available: number;
-         qty_requested: number;
-       }),
+    api.post<{
+      allocations: Array<{
+        batch_id: number; batch_no: string; expiry_date: string;
+        available: number; take: number; mrp: string;
+      }>;
+      shortfall: number;
+      total_available: number;
+      qty_requested: number;
+    }>(`${PHX}/allocate-preview/`, { drug_id: drugId, qty }).then(r => r.data),
 
   movements: (params?: Record<string, unknown>) =>
-    api.get<Paginated<StockMovement>>("/pharmacy/movements/", { params }).then(r => r.data),
+    api.get<Paginated<StockMovement>>(`${PHX}/movements/`, { params }).then(r => r.data),
 
   lowStock: (threshold = 20) =>
     api.get<{ threshold: number; count: number; drugs: LowStockRow[] }>(
-      "/pharmacy/reports/low-stock/", { params: { threshold } }
+      `${PHX}/reports/low-stock/`, { params: { threshold } },
     ).then(r => r.data),
 
   nearExpiry: (days = 90) =>
     api.get<{ days: number; count: number; batches: DrugBatch[] }>(
-      "/pharmacy/reports/near-expiry/", { params: { days } }
+      `${PHX}/reports/near-expiry/`, { params: { days } },
     ).then(r => r.data),
 };
 
+// ─── Pharmacy orders ─────────────────────────────────────────────────────────
 export const pharmacyOrdersApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<PharmacyOrder>>("/pharmacy/orders/", { params }).then(r => r.data),
+    api.get<Paginated<PharmacyOrder>>(`${PHX}/orders/`, { params }).then(r => r.data),
   get: (id: number) =>
-    api.get<PharmacyOrder>(`/pharmacy/orders/${id}/`).then(r => r.data),
+    api.get<PharmacyOrder>(`${PHX}/orders/${id}/`).then(r => r.data),
   create: (data: Partial<PharmacyOrder>) =>
-    api.post<PharmacyOrder>("/pharmacy/orders/", data).then(r => r.data),
+    api.post<PharmacyOrder>(`${PHX}/orders/`, data).then(r => r.data),
   startFromPrescription: (prescription_id: number) =>
-    api.post<OrderWithWarnings>("/pharmacy/orders/start-from-prescription/",
-                                { prescription_id }).then(r => r.data),
+    api.post<OrderWithWarnings>(`${PHX}/orders/start-from-prescription/`,
+      { prescription_id }).then(r => r.data),
   addItem: (orderId: number, data: { drug_id: number; quantity: number; discount_pct?: number; unit_mrp?: number }) =>
-    api.post<PharmacyOrder>(`/pharmacy/orders/${orderId}/add-item/`, data).then(r => r.data),
+    api.post<PharmacyOrder>(`${PHX}/orders/${orderId}/add-item/`, data).then(r => r.data),
   removeItem: (orderId: number, itemId: number) =>
-    api.post<PharmacyOrder>(`/pharmacy/orders/${orderId}/remove-item/${itemId}/`).then(r => r.data),
+    api.post<PharmacyOrder>(`${PHX}/orders/${orderId}/remove-item/${itemId}/`).then(r => r.data),
   dispense: (id: number) =>
-    api.post<PharmacyOrder>(`/pharmacy/orders/${id}/dispense/`).then(r => r.data),
+    api.post<PharmacyOrder>(`${PHX}/orders/${id}/dispense/`).then(r => r.data),
   cancel: (id: number, reason: string) =>
-    api.post<PharmacyOrder>(`/pharmacy/orders/${id}/cancel/`, { reason }).then(r => r.data),
+    api.post<PharmacyOrder>(`${PHX}/orders/${id}/cancel/`, { reason }).then(r => r.data),
 };
 
-// ─── Refunds (Phase 2a billing extension) ──────────
+// ─── Refunds (Phase 2a billing extension) ────────────────────────────────────
 export interface Refund {
   id: number;
   code: string;
@@ -118,24 +127,26 @@ export interface Refund {
   notes: string;
 }
 
+const BILL = "/billing";
+
 export const refundsApi = {
   list: (params?: Record<string, unknown>) =>
-    api.get<Paginated<Refund>>("/billing/refunds/", { params }).then(r => r.data),
+    api.get<Paginated<Refund>>(`${BILL}/refunds/`, { params }).then(r => r.data),
   get: (id: number) =>
-    api.get<Refund>(`/billing/refunds/${id}/`).then(r => r.data),
+    api.get<Refund>(`${BILL}/refunds/${id}/`).then(r => r.data),
   request: (invoiceId: number, data: {
     amount: number; reason: string; method?: string; payment_id?: number;
   }) =>
-    api.post<Refund>(`/billing/invoices/${invoiceId}/request-refund/`, data)
-       .then(r => r.data),
+    api.post<Refund>(`${BILL}/invoices/${invoiceId}/request-refund/`, data).then(r => r.data),
   approve: (id: number) =>
-    api.post<Refund>(`/billing/refunds/${id}/approve/`).then(r => r.data),
+    api.post<Refund>(`${BILL}/refunds/${id}/approve/`).then(r => r.data),
   process: (id: number) =>
-    api.post<Refund>(`/billing/refunds/${id}/process/`).then(r => r.data),
+    api.post<Refund>(`${BILL}/refunds/${id}/process/`).then(r => r.data),
   reject: (id: number, reason: string) =>
-    api.post<Refund>(`/billing/refunds/${id}/reject/`, { reason }).then(r => r.data),
+    api.post<Refund>(`${BILL}/refunds/${id}/reject/`, { reason }).then(r => r.data),
 };
 
+// ─── Pharmacy dashboard (NOT the executive dashboard — this is /pharmacy/dashboard/) ──
 export const pharmacyDashboardApi = {
   fetch: () =>
     api.get<{
@@ -150,5 +161,5 @@ export const pharmacyDashboardApi = {
       today_orders_count: number;
       today_completed_count: number;
       today_revenue: string;
-    }>("/pharmacy/dashboard/").then(r => r.data),
+    }>(`${PHX}/dashboard/`).then(r => r.data),
 };

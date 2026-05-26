@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { requisitionsApi } from "@/lib/api/blood_bank";
-import { apiClient } from "@/lib/api/client";
+import { api } from "@/lib/api";
 
 interface Patient {
   id: number; mrn: string; first_name: string; last_name: string; phone: string;
@@ -22,7 +22,7 @@ export default function NewRequisitionPage() {
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () =>
-      (await apiClient.get<Doctor[]>("/api/specialist/doctors/")).data,
+      (await api.get<Doctor[]>("/specialist/doctors/")).data,
   });
 
   // Patient picker
@@ -33,7 +33,7 @@ export default function NewRequisitionPage() {
     if (!patientQuery || patientQuery.length < 2) { setResults([]); return; }
     const handle = setTimeout(async () => {
       try {
-        const r = await apiClient.get<Patient[]>("/api/core/patients/", {
+        const r = await api.get<Patient[]>("/core/patients/", {
           params: { search: patientQuery },
         });
         setResults(r.data.slice(0, 8));
@@ -66,8 +66,8 @@ export default function NewRequisitionPage() {
       if (admissionId) payload.admission = Number(admissionId);
       return requisitionsApi.create(payload);
     },
-    onSuccess: (resp) =>
-      router.push(`/dashboard/blood-bank/requisitions/${resp.data.id}`),
+    onSuccess: (req) =>
+      router.push(`/dashboard/blood-bank/requisitions/${req.id}`),
   });
 
   return (

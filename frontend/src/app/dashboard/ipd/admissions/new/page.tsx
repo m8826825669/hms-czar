@@ -83,7 +83,7 @@ export default function NewAdmissionPage() {
   const departments = useQuery({
     queryKey: ["departments-active"],
     queryFn: () =>
-      api.get<{ results: Department[] }>("/department/departments/", {
+      api.get<{ results: Department[] }>("/departments/", {
         params: { is_active: true, page_size: 100 },
       }).then(r => r.data.results).catch(() => []),
   });

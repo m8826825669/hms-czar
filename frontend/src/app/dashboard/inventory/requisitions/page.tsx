@@ -25,7 +25,7 @@ export default function RequisitionsPage() {
 
   const { data: reqs = [] } = useQuery({
     queryKey: ["requisitions"],
-    queryFn: async () => (await requisitionsApi.list()).data,
+    queryFn: async () => await requisitionsApi.list(),
   });
 
   const approve = useMutation({

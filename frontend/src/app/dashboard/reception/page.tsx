@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,24 @@ function Modal({ open, onClose, title, children, width="max-w-2xl" }: {
 }
 
 // ─── New Patient Registration Form ────────────────────────────────────────────
+
+// IMPORTANT: `F` MUST be defined at module scope, NOT inside NewPatientForm.
+// When it was inside the component body, each render of NewPatientForm
+// produced a new `F` function reference. React treats a new function reference
+// as a NEW component type and unmounts/remounts the entire subtree, so every
+// keystroke lost focus on the input. Hoisting it here keeps the reference
+// stable across renders. See https://react.dev/learn/render-and-commit
+function F({ label, id, req=false, children }: { label: string; id: string; req?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
 function NewPatientForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (mrn: string) => void }) {
   const [form, setForm] = useState<NewPatientForm>({
     first_name:"", last_name:"", date_of_birth:"", gender:"M",
@@ -102,15 +121,6 @@ function NewPatientForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
       setLoading(false);
     }
   };
-
-  const F = ({ label, id, req=false, children }: { label: string; id: string; req?: boolean; children: React.ReactNode }) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -395,6 +405,7 @@ function AppointmentsTable({
 
 // ─── Main Reception Page ──────────────────────────────────────────────────────
 export default function ReceptionPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<ReceptionStats>(RECEPTION_MOCK.stats);
   const [appointments, setAppointments] = useState<TodayAppointment[]>(RECEPTION_MOCK.appointments);
   const [loading, setLoading] = useState(true);
@@ -444,8 +455,11 @@ export default function ReceptionPage() {
   const QUICK_ACTIONS = [
     { label:"New Patient Registration", icon:UserPlus,  color:"text-teal-600",   bg:"bg-teal-50",   action: () => setShowRegister(true) },
     { label:"Search Patient",           icon:Search,    color:"text-blue-600",   bg:"bg-blue-50",   action: () => setShowSearch(true)   },
-    { label:"Book Appointment",         icon:BookOpen,  color:"text-purple-600", bg:"bg-purple-50", action: () => {}                    },
-    { label:"Visitor Pass",             icon:IdCard,    color:"text-amber-600",  bg:"bg-amber-50",  action: () => {}                    },
+    // Both of these route to existing dedicated pages — there's no inline
+    // modal here. The pages already handle the full create flow (form,
+    // validation, react-query mutation, success toast).
+    { label:"Book Appointment",         icon:BookOpen,  color:"text-purple-600", bg:"bg-purple-50", action: () => router.push("/dashboard/reception/appointments/new") },
+    { label:"Visitor Pass",             icon:IdCard,    color:"text-amber-600",  bg:"bg-amber-50",  action: () => router.push("/dashboard/reception/visitor-pass") },
   ];
 
   return (

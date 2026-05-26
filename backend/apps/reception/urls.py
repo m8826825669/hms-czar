@@ -7,4 +7,7 @@ router.register("appointments", views.AppointmentViewSet, basename="appointment"
 router.register("queue", views.QueueTokenViewSet, basename="queue-token")
 router.register("visitor-passes", views.VisitorPassViewSet, basename="visitor-pass")
 
-urlpatterns = [path("", include(router.urls))]
+urlpatterns = [
+    path("stats/", views.reception_stats, name="reception-stats"),
+    path("", include(router.urls))
+]

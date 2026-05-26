@@ -1,4 +1,6 @@
-import { apiClient } from "@/lib/api/client";
+// frontend/src/lib/api/phase4b.ts
+"use client";
+import { api } from "@/lib/api";
 import type {
   Employee, Designation, LeaveType, LeaveRequest, LeaveBalance,
   SalaryComponent, PayrollRun, Payslip,
@@ -6,92 +8,130 @@ import type {
   VisitorPass, GatePass, Incident, SecurityDashboard,
 } from "@/types/phase4b";
 
-// HR
+// ─── HR ──────────────────────────────────────────────────────────────────────
+const HR = "/hr";
+
 export const employeesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Employee[]>("/api/hr/employees/", { params }),
-  get: (id: number) => apiClient.get<Employee>(`/api/hr/employees/${id}/`),
-  create: (data: any) => apiClient.post<Employee>("/api/hr/employees/", data),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Employee[]>(`${HR}/employees/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<Employee>(`${HR}/employees/${id}/`).then(r => r.data),
+  create: (data: Partial<Employee>) =>
+    api.post<Employee>(`${HR}/employees/`, data).then(r => r.data),
 };
+
 export const designationsApi = {
-  list: () => apiClient.get<Designation[]>("/api/hr/designations/"),
+  list: () =>
+    api.get<Designation[]>(`${HR}/designations/`).then(r => r.data),
 };
+
 export const leaveTypesApi = {
-  list: () => apiClient.get<LeaveType[]>("/api/hr/leave-types/"),
+  list: () =>
+    api.get<LeaveType[]>(`${HR}/leave-types/`).then(r => r.data),
 };
+
 export const leaveRequestsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<LeaveRequest[]>("/api/hr/leave-requests/", { params }),
-  create: (data: any) => apiClient.post("/api/hr/leave-requests/", data),
-  approve: (id: number, data?: any) =>
-    apiClient.post(`/api/hr/leave-requests/${id}/approve/`, data ?? {}),
-  reject: (id: number, data?: any) =>
-    apiClient.post(`/api/hr/leave-requests/${id}/reject/`, data ?? {}),
+  list: (params?: Record<string, unknown>) =>
+    api.get<LeaveRequest[]>(`${HR}/leave-requests/`, { params }).then(r => r.data),
+  create: (data: Partial<LeaveRequest>) =>
+    api.post(`${HR}/leave-requests/`, data).then(r => r.data),
+  approve: (id: number, data?: Record<string, unknown>) =>
+    api.post(`${HR}/leave-requests/${id}/approve/`, data ?? {}).then(r => r.data),
+  reject: (id: number, data?: Record<string, unknown>) =>
+    api.post(`${HR}/leave-requests/${id}/reject/`, data ?? {}).then(r => r.data),
 };
+
 export const leaveBalancesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<LeaveBalance[]>("/api/hr/leave-balances/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<LeaveBalance[]>(`${HR}/leave-balances/`, { params }).then(r => r.data),
 };
 
-// Payroll
+// ─── Payroll ─────────────────────────────────────────────────────────────────
+const PAY = "/payroll";
+
 export const salaryComponentsApi = {
-  list: () => apiClient.get<SalaryComponent[]>("/api/payroll/components/"),
-};
-export const payrollRunsApi = {
-  list: () => apiClient.get<PayrollRun[]>("/api/payroll/runs/"),
-  get: (id: number) => apiClient.get<PayrollRun>(`/api/payroll/runs/${id}/`),
-  create: (data: any) => apiClient.post<PayrollRun>("/api/payroll/runs/", data),
-  process: (id: number) => apiClient.post(`/api/payroll/runs/${id}/process/`),
-  approve: (id: number) => apiClient.post(`/api/payroll/runs/${id}/approve/`),
-  markPaid: (id: number) => apiClient.post(`/api/payroll/runs/${id}/mark-paid/`),
-};
-export const payslipsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Payslip[]>("/api/payroll/payslips/", { params }),
-  get: (id: number) => apiClient.get<Payslip>(`/api/payroll/payslips/${id}/`),
+  list: () =>
+    api.get<SalaryComponent[]>(`${PAY}/components/`).then(r => r.data),
 };
 
-// Attendance
+export const payrollRunsApi = {
+  list: () =>
+    api.get<PayrollRun[]>(`${PAY}/runs/`).then(r => r.data),
+  get: (id: number) =>
+    api.get<PayrollRun>(`${PAY}/runs/${id}/`).then(r => r.data),
+  create: (data: Partial<PayrollRun>) =>
+    api.post<PayrollRun>(`${PAY}/runs/`, data).then(r => r.data),
+  process: (id: number) =>
+    api.post(`${PAY}/runs/${id}/process/`).then(r => r.data),
+  approve: (id: number) =>
+    api.post(`${PAY}/runs/${id}/approve/`).then(r => r.data),
+  markPaid: (id: number) =>
+    api.post(`${PAY}/runs/${id}/mark-paid/`).then(r => r.data),
+};
+
+export const payslipsApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<Payslip[]>(`${PAY}/payslips/`, { params }).then(r => r.data),
+  get: (id: number) =>
+    api.get<Payslip>(`${PAY}/payslips/${id}/`).then(r => r.data),
+};
+
+// ─── Attendance ──────────────────────────────────────────────────────────────
+const ATT = "/attendance";
+
 export const shiftsApi = {
-  list: () => apiClient.get<Shift[]>("/api/attendance/shifts/"),
+  list: () =>
+    api.get<Shift[]>(`${ATT}/shifts/`).then(r => r.data),
 };
+
 export const attendanceLogsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<AttendanceLog[]>("/api/attendance/logs/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<AttendanceLog[]>(`${ATT}/logs/`, { params }).then(r => r.data),
   punch: (data: { employee_id: number; punch_type: "IN" | "OUT"; source?: string }) =>
-    apiClient.post<AttendanceLog>("/api/attendance/logs/punch/", data),
+    api.post<AttendanceLog>(`${ATT}/logs/punch/`, data).then(r => r.data),
 };
+
 export const dailyAttendanceApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<DailyAttendance[]>("/api/attendance/daily/", { params }),
+  list: (params?: Record<string, unknown>) =>
+    api.get<DailyAttendance[]>(`${ATT}/daily/`, { params }).then(r => r.data),
 };
+
 export const attendanceTodayApi = {
   summary: () =>
-    apiClient.get<AttendanceTodaySummary>("/api/attendance/today-summary/"),
+    api.get<AttendanceTodaySummary>(`${ATT}/today-summary/`).then(r => r.data),
 };
 
-// Security
+// ─── Security ────────────────────────────────────────────────────────────────
+const SEC = "/security";
+
 export const visitorPassesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<VisitorPass[]>("/api/security/visitor-passes/", { params }),
-  create: (data: any) => apiClient.post<VisitorPass>("/api/security/visitor-passes/", data),
-  logExit: (id: number, data?: any) =>
-    apiClient.post(`/api/security/visitor-passes/${id}/log-exit/`, data ?? {}),
+  list: (params?: Record<string, unknown>) =>
+    api.get<VisitorPass[]>(`${SEC}/visitor-passes/`, { params }).then(r => r.data),
+  create: (data: Partial<VisitorPass>) =>
+    api.post<VisitorPass>(`${SEC}/visitor-passes/`, data).then(r => r.data),
+  logExit: (id: number, data?: Record<string, unknown>) =>
+    api.post(`${SEC}/visitor-passes/${id}/log-exit/`, data ?? {}).then(r => r.data),
 };
+
 export const gatePassesApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<GatePass[]>("/api/security/gate-passes/", { params }),
-  create: (data: any) => apiClient.post<GatePass>("/api/security/gate-passes/", data),
-  markReturned: (id: number, data?: any) =>
-    apiClient.post(`/api/security/gate-passes/${id}/mark-returned/`, data ?? {}),
+  list: (params?: Record<string, unknown>) =>
+    api.get<GatePass[]>(`${SEC}/gate-passes/`, { params }).then(r => r.data),
+  create: (data: Partial<GatePass>) =>
+    api.post<GatePass>(`${SEC}/gate-passes/`, data).then(r => r.data),
+  markReturned: (id: number, data?: Record<string, unknown>) =>
+    api.post(`${SEC}/gate-passes/${id}/mark-returned/`, data ?? {}).then(r => r.data),
 };
+
 export const incidentsApi = {
-  list: (params?: Record<string, string>) =>
-    apiClient.get<Incident[]>("/api/security/incidents/", { params }),
-  create: (data: any) => apiClient.post<Incident>("/api/security/incidents/", data),
-  escalate: (id: number, data?: any) =>
-    apiClient.post(`/api/security/incidents/${id}/escalate/`, data ?? {}),
+  list: (params?: Record<string, unknown>) =>
+    api.get<Incident[]>(`${SEC}/incidents/`, { params }).then(r => r.data),
+  create: (data: Partial<Incident>) =>
+    api.post<Incident>(`${SEC}/incidents/`, data).then(r => r.data),
+  escalate: (id: number, data?: Record<string, unknown>) =>
+    api.post(`${SEC}/incidents/${id}/escalate/`, data ?? {}).then(r => r.data),
 };
+
 export const securityDashboardApi = {
-  get: () => apiClient.get<SecurityDashboard>("/api/security/dashboard/"),
+  get: () =>
+    api.get<SecurityDashboard>(`${SEC}/dashboard/`).then(r => r.data),
 };

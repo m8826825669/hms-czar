@@ -24,7 +24,7 @@ export default function SurgeryBookingDetailPage() {
 
   const { data: booking, isLoading } = useQuery<SurgeryBooking>({
     queryKey: ["booking", id],
-    queryFn: async () => (await bookingsApi.get(id)).data,
+    queryFn: async () => await bookingsApi.get(id),
     enabled: !!id,
     refetchInterval: 15000,
   });
