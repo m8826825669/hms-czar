@@ -17,12 +17,27 @@ import {
 } from "@/lib/api/department";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+// Map of UI-friendly badge styling per Department.type. The keys cover
+// both the mock data's legacy values ("OPD", "IPD", "Diagnostic", ...)
+// AND the real backend serializer's enum values ("CLINICAL", "WARD",
+// "DIAGNOSTIC", "PHARMACY", "OT", "ADMIN", "SUPPORT"). Without this
+// coverage the page crashed on real data because lookups returned
+// undefined and tc.badge / tc.dot referenced undefined.
 const TYPE_CFG: Record<string, { badge: string; dot: string }> = {
+  // Mock-data values (kept for back-compat with DEPARTMENT_MOCK)
   OPD:        { badge: "bg-blue-100 text-blue-700",   dot: "bg-blue-500"   },
   IPD:        { badge: "bg-purple-100 text-purple-700",dot: "bg-purple-500" },
   Diagnostic: { badge: "bg-teal-100 text-teal-700",   dot: "bg-teal-500"   },
   Support:    { badge: "bg-amber-100 text-amber-700",  dot: "bg-amber-500"  },
   Admin:      { badge: "bg-slate-100 text-slate-600",  dot: "bg-slate-400"  },
+  // Real backend Department.TYPES values (apps/department/models.py)
+  CLINICAL:   { badge: "bg-blue-100 text-blue-700",   dot: "bg-blue-500"   },
+  DIAGNOSTIC: { badge: "bg-teal-100 text-teal-700",   dot: "bg-teal-500"   },
+  PHARMACY:   { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  WARD:       { badge: "bg-purple-100 text-purple-700",dot: "bg-purple-500" },
+  OT:         { badge: "bg-rose-100 text-rose-700",   dot: "bg-rose-500"   },
+  ADMIN:      { badge: "bg-slate-100 text-slate-600",  dot: "bg-slate-400"  },
+  SUPPORT:    { badge: "bg-amber-100 text-amber-700",  dot: "bg-amber-500"  },
 };
 const STATUS_CFG: Record<DeptStatus, { badge: string; dot: string }> = {
   active:   { badge: "bg-green-100 text-green-700", dot: "bg-green-500" },
@@ -98,6 +113,21 @@ const EMPTY: DepartmentForm = {
   location:"", beds:"", status:"active", description:"", services:"",
 };
 
+// HOISTED to module scope to prevent focus loss on each keystroke. (Bug
+// class instance #1, same root cause as the reception and specialist
+// forms: F-defined-inside-component made a new component identity per
+// render, React unmounted/remounted the subtree on every state update.)
+const F = ({ label, id, req = false, full = false, children }: {
+  label: string; id: string; req?: boolean; full?: boolean; children: React.ReactNode;
+}) => (
+  <div className={cn("space-y-1.5", full && "col-span-2")}>
+    <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      {label}{req && <span className="text-red-500 ml-0.5">*</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 function DeptFormModal({ open, onClose, onSaved, editing }: {
   open: boolean; onClose: () => void; onSaved: (d: Department) => void; editing: Department | null;
 }) {
@@ -107,12 +137,19 @@ function DeptFormModal({ open, onClose, onSaved, editing }: {
 
   useEffect(() => {
     if (editing) {
+      // Defensive ?? defaults: real backend Department doesn't have all
+      // of these fields (head_doctor is FK, no extension, no services).
+      // Use empty strings so the form opens without crashing.
       setForm({
-        name: editing.name, code: editing.code, type: editing.type,
-        head_doctor: editing.head_doctor, extension: editing.extension,
-        location: editing.location, beds: editing.beds,
-        status: editing.status, description: editing.description,
-        services: editing.services.join(", "),
+        name: editing.name ?? "", code: editing.code ?? "",
+        type: editing.type ?? "OPD",
+        head_doctor: editing.head_doctor ?? "",
+        extension: editing.extension ?? "",
+        location: editing.location ?? "",
+        beds: editing.beds ?? "",
+        status: editing.status ?? "active",
+        description: editing.description ?? "",
+        services: (editing.services ?? []).join(", "),
       });
     } else {
       setForm(EMPTY);
@@ -133,34 +170,23 @@ function DeptFormModal({ open, onClose, onSaved, editing }: {
         saved = await departmentApi.create(form);
       }
       onSaved(saved);
-    } catch {
-      // Optimistic mock during development
-      const mock: Department = {
-        id: editing?.id ?? Date.now(),
-        name: form.name, code: form.code, type: form.type,
-        head_doctor: form.head_doctor, extension: form.extension,
-        location: form.location, beds: Number(form.beds) || 0,
-        occupied_beds: editing?.occupied_beds ?? 0,
-        staff_count: editing?.staff_count ?? 0,
-        status: form.status, description: form.description,
-        services: form.services.split(",").map(s => s.trim()).filter(Boolean),
-      };
-      onSaved(mock);
+    } catch (err: unknown) {
+      // The previous code fabricated a fake Department object with
+      // Date.now() as id and called onSaved(fake) — making the user
+      // think a department was created/updated when the API rejected
+      // their request. Same disease as the fake-MRN bug. Surface the
+      // real error so the user can fix the form or retry.
+      const e = err as { response?: { data?: { detail?: string } | string }; message?: string };
+      const detail = e?.response?.data;
+      const message = (typeof detail === "object" && detail?.detail)
+        || (typeof detail === "string" ? detail : null)
+        || e?.message
+        || "Save failed. Please try again.";
+      setError(typeof message === "string" ? message : JSON.stringify(message));
     } finally { setLoading(false); }
   };
 
   const sel = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
-  const F = ({ label, id, req = false, full = false, children }: {
-    label: string; id: string; req?: boolean; full?: boolean; children: React.ReactNode;
-  }) => (
-    <div className={cn("space-y-1.5", full && "col-span-2")}>
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Edit Department" : "Add Department"}>
@@ -239,7 +265,13 @@ function DeptCard({ dept, idx, onEdit, onDelete }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const tc = TYPE_CFG[dept.type]   ?? TYPE_CFG.Admin;
-  const sc = STATUS_CFG[dept.status];
+  // Real backend Department has `is_active: boolean`, not a `status` enum.
+  // Treat either as a source: status="active" OR is_active=true.
+  // Falls back to the inactive style for missing/unknown values so the
+  // page can't crash on undefined.badge again.
+  const isActive = (dept as { is_active?: boolean }).is_active === true
+                    || dept.status === "active";
+  const sc = (isActive ? STATUS_CFG.active : STATUS_CFG.inactive);
   const bedPct = pct(dept.occupied_beds, dept.beds);
 
   return (
@@ -262,7 +294,7 @@ function DeptCard({ dept, idx, onEdit, onDelete }: {
                   </span>
                   <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", sc.badge)}>
                     <span className={cn("h-1.5 w-1.5 rounded-full", sc.dot)} />
-                    {dept.status === "active" ? "Active" : "Inactive"}
+                    {isActive ? "Active" : "Inactive"}
                   </span>
                 </div>
                 {dept.description && (
@@ -315,12 +347,15 @@ function DeptCard({ dept, idx, onEdit, onDelete }: {
               </div>
             )}
 
-            {/* Services toggle */}
-            {dept.services.length > 0 && (
+            {/* Services toggle. Real backend Department has no `services`
+                array — it's a mock-only field. `?? []` keeps the page
+                from crashing when an item from the real serializer has
+                no services. */}
+            {(dept.services ?? []).length > 0 && (
               <button onClick={() => setExpanded(e => !e)}
                 className="flex items-center gap-1 mt-2 text-[11px] text-primary hover:underline">
                 <Layers className="h-3 w-3" />
-                {dept.services.length} services
+                {(dept.services ?? []).length} services
                 {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             )}
@@ -332,7 +367,7 @@ function DeptCard({ dept, idx, onEdit, onDelete }: {
           <div className="border-t bg-muted/30 px-5 py-3">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Services Offered</p>
             <div className="flex flex-wrap gap-2">
-              {dept.services.map((s, i) => (
+              {(dept.services ?? []).map((s, i) => (
                 <span key={i} className="rounded-full border bg-background px-3 py-1 text-[12px] text-muted-foreground">
                   {s}
                 </span>
@@ -359,10 +394,23 @@ export default function DepartmentPage() {
   const fetchAll = useCallback(async () => {
     try {
       const data = await departmentApi.list();
-      if (data.length > 0) setDepartments(data);
+      // Removed the `if (data.length > 0)` prefer-mock-over-empty guard.
+      // An empty list from the API is now honored — a hospital with no
+      // departments configured should see "no departments" not the
+      // demo data. Note: this page's UI still expects a fabricated
+      // Department shape (services array, beds, etc.) that the real
+      // serializer doesn't emit. Field-shape mismatch will surface
+      // here — track in the follow-up bundle for this module.
+      setDepartments(data);
       setError(null);
-    } catch {
-      setError("Showing demo data — Django API not reachable.");
+    } catch (e) {
+      // Surface the real error rather than the misleading "Showing
+      // demo data" message. If demo data IS in fact what's being
+      // shown (because data hasn't loaded yet), the error banner
+      // makes that explicit.
+      console.error("Department list fetch failed:", e);
+      const msg = e instanceof Error ? e.message : "Failed to load departments.";
+      setError(`Could not load departments: ${msg}`);
     } finally { setLoading(false); }
   }, []);
 
@@ -387,19 +435,38 @@ export default function DepartmentPage() {
     setEditing(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!delTarget) return;
-    departmentApi.delete(delTarget.id).catch(() => {});
+    try {
+      await departmentApi.delete(delTarget.id);
+    } catch (e) {
+      // The previous code did `.catch(() => {})` — swallowing failures
+      // silently. The user clicked delete, the API failed (network,
+      // permission, FK constraint, whatever), but the list still
+      // removed the item locally. On refresh the department was back.
+      // The user's mental model was wrong without any signal.
+      console.error("Department delete failed:", e);
+      const msg = e instanceof Error ? e.message : "Delete failed.";
+      setError(`Could not delete ${delTarget.name}: ${msg}`);
+      setDelTarget(null);
+      return;
+    }
     setDepartments(prev => prev.filter(d => d.id !== delTarget.id));
     setDelTarget(null);
   };
 
-  // Summary counts
+  // Summary counts. Real backend Department has neither `beds` nor
+  // `occupied_beds` nor `staff_count` — those were mock-only fields. The
+  // `?? 0` keeps the summary numbers from rendering as NaN. (The
+  // page needs a proper rewrite to compute real counts from related
+  // models; this is a defensive bridge.)
   const total      = departments.length;
-  const active     = departments.filter(d => d.status === "active").length;
-  const totalBeds  = departments.reduce((s, d) => s + d.beds, 0);
-  const occupiedB  = departments.reduce((s, d) => s + d.occupied_beds, 0);
-  const totalStaff = departments.reduce((s, d) => s + d.staff_count, 0);
+  const active     = departments.filter(d =>
+    (d as { is_active?: boolean }).is_active === true || d.status === "active"
+  ).length;
+  const totalBeds  = departments.reduce((s, d) => s + (d.beds ?? 0), 0);
+  const occupiedB  = departments.reduce((s, d) => s + (d.occupied_beds ?? 0), 0);
+  const totalStaff = departments.reduce((s, d) => s + (d.staff_count ?? 0), 0);
 
   const TYPE_TABS = ["All", ...DEPT_TYPES];
 

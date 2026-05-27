@@ -8,7 +8,9 @@
     "start": "next start -p 3000",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "gen:api":       "node scripts/gen-api.js",
+    "gen:api:watch": "nodemon --watch ../backend --ext py --exec npm run gen:api"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

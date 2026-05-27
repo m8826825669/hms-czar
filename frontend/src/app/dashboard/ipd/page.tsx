@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,12 @@ export default function IpdPage(){
         <div><h2 className="text-2xl font-bold">IPD</h2><p className="text-sm text-muted-foreground">Inpatient census, ward management, and discharge planning</p></div>
         <div className="flex gap-2">
           <button onClick={fetchData} className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"><RefreshCw className="h-3.5 w-3.5"/>Refresh</button>
-          <Button className="gap-2"><UserPlus className="h-4 w-4"/>Admit Patient</Button>
+          {/* Bug class instance #7: this button was a dead <Button> with
+              no onClick. The destination /dashboard/ipd/admissions/new
+              already exists; we just weren't linking to it. */}
+          <Link href="/dashboard/ipd/admissions/new">
+            <Button className="gap-2"><UserPlus className="h-4 w-4"/>Admit Patient</Button>
+          </Link>
         </div>
       </div>
       {error&&<div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0"/>{error}</div>}

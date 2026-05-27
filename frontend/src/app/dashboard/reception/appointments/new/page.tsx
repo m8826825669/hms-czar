@@ -48,7 +48,7 @@ export default function NewAppointmentPage() {
     enabled: !!patientId,
   });
 
-  const { data: doctorsData } = useQuery({
+  const { data: doctorsData, isLoading: doctorsLoading, error: doctorsError } = useQuery({
     queryKey: ["doctors"],
     queryFn: () => specialistApi.listDoctors({ is_consulting: true }),
   });
@@ -167,14 +167,32 @@ export default function NewAppointmentPage() {
             <Select
               value={doctorId ?? ""}
               onChange={(e) => setDoctorId(Number(e.target.value))}
+              disabled={doctorsLoading || !!doctorsError}
             >
-              <option value="">— Select —</option>
+              <option value="">
+                {doctorsLoading ? "Loading doctors…"
+                 : doctorsError ? "Could not load doctors"
+                 : !doctorsData?.results?.length ? "No doctors available"
+                 : "— Select —"}
+              </option>
               {(doctorsData?.results ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.full_name} ({d.specialty_names.join(", ")})
                 </option>
               ))}
             </Select>
+            {doctorsError && (
+              <p className="text-xs text-red-600">
+                Failed to load the doctor list. Check your network or tell IT.
+              </p>
+            )}
+            {!doctorsLoading && !doctorsError && !doctorsData?.results?.length && (
+              <p className="text-xs text-amber-700">
+                No doctors are registered as consulting yet. Ask your admin to
+                run <code className="font-mono">python manage.py seed_specialist</code>{" "}
+                or add doctors via Specialist Mgmt.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Visit Type</Label>

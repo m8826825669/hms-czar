@@ -1,3 +1,2 @@
-# The dashboard app has no models of its own.
-# It aggregates from opd, ipd, ot, billing, lab, pharmacy, reception,
-# blood_bank, inventory. See views.py.
+# This app has no models — it's a pure aggregator over existing apps.
+# Stub kept so Django app loading is happy.

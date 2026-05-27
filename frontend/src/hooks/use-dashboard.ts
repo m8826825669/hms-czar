@@ -1,73 +1,80 @@
 "use client";
 // hooks/use-dashboard.ts
+//
+// REWRITTEN: was 8 parallel API calls in Promise.allSettled with per-section
+// MOCK fallbacks. Now one call. Real error state. No silent fallbacks.
+//
 import { useEffect, useState, useCallback } from "react";
-import { dashboardApi, MOCK, type DashboardStats, type WardOccupancy,
-  type RecentOpdPatient, type OtScheduleEntry, type DashboardAlert,
-  type MonthlyTrend, type OpdDailyCount, type RevenueBreakdown } from "@/lib/api/dashboard";
+import {
+  dashboardApi,
+  type DashboardStats, type WardOccupancy, type RecentOpdPatient,
+  type OtScheduleEntry, type DashboardAlert, type MonthlyTrend,
+  type OpdDailyCount, type RevenueBreakdown,
+} from "@/lib/api/dashboard";
 
 interface DashboardData {
-  stats:    DashboardStats;
-  wards:    WardOccupancy[];
-  opd:      RecentOpdPatient[];
-  ot:       OtScheduleEntry[];
-  alerts:   DashboardAlert[];
-  monthly:  MonthlyTrend[];
-  weekly:   OpdDailyCount[];
-  revenue:  RevenueBreakdown[];
+  stats:   DashboardStats;
+  wards:   WardOccupancy[];
+  opd:     RecentOpdPatient[];
+  ot:      OtScheduleEntry[];
+  alerts:  DashboardAlert[];
+  monthly: MonthlyTrend[];
+  weekly:  OpdDailyCount[];
+  revenue: RevenueBreakdown[];
 }
 
 interface UseDashboardReturn {
-  data:     DashboardData;
-  loading:  boolean;
-  error:    string | null;
-  refresh:  () => void;
+  data:    DashboardData;
+  loading: boolean;
+  error:   string | null;
+  refresh: () => void;
 }
 
-// Start with mock data so the UI is never blank
-const DEFAULT_DATA: DashboardData = {
-  stats:   MOCK.stats,
-  wards:   MOCK.wards,
-  opd:     MOCK.opd,
-  ot:      MOCK.ot,
-  alerts:  MOCK.alerts,
-  monthly: MOCK.monthly,
-  weekly:  MOCK.weekly,
-  revenue: MOCK.revenue,
+// Empty data — the initial state and the post-error state. Honest about
+// having no information, rather than displaying convincing fake numbers.
+const EMPTY: DashboardData = {
+  stats: {
+    opd_today: 0, opd_yesterday: 0,
+    ipd_census: 0, ipd_capacity: 0,
+    ot_scheduled: 0, ot_completed: 0, ot_ongoing: 0,
+    revenue_today: 0, revenue_yesterday: 0, revenue_target: 0,
+    emergency_today: 0, pharmacy_bills: 0,
+    lab_orders: 0, lab_pending: 0,
+    discharges_today: 0, discharge_pending: 0,
+  },
+  wards: [], opd: [], ot: [],
+  alerts: [], monthly: [], weekly: [], revenue: [],
 };
 
 export function useDashboard(pollMs = 30_000): UseDashboardReturn {
-  const [data,    setData]    = useState<DashboardData>(DEFAULT_DATA);
+  const [data,    setData]    = useState<DashboardData>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
     try {
-      const [stats, wards, opd, ot, alerts, monthly, weekly, revenue] =
-        await Promise.allSettled([
-          dashboardApi.stats(),
-          dashboardApi.wardOccupancy(),
-          dashboardApi.recentOpd(),
-          dashboardApi.otSchedule(),
-          dashboardApi.alerts(),
-          dashboardApi.monthlyTrend(),
-          dashboardApi.opdWeekly(),
-          dashboardApi.revenueBreakdown(),
-        ]);
-
+      const payload = await dashboardApi.all();
+      // Extract the data sections; ignore `as_of` here (the consumer can
+      // pass it through later if needed).
       setData({
-        stats:   stats.status   === "fulfilled" ? stats.value   : MOCK.stats,
-        wards:   wards.status   === "fulfilled" ? wards.value   : MOCK.wards,
-        opd:     opd.status     === "fulfilled" ? opd.value     : MOCK.opd,
-        ot:      ot.status      === "fulfilled" ? ot.value      : MOCK.ot,
-        alerts:  alerts.status  === "fulfilled" ? alerts.value  : MOCK.alerts,
-        monthly: monthly.status === "fulfilled" ? monthly.value : MOCK.monthly,
-        weekly:  weekly.status  === "fulfilled" ? weekly.value  : MOCK.weekly,
-        revenue: revenue.status === "fulfilled" ? revenue.value : MOCK.revenue,
+        stats:   payload.stats,
+        wards:   payload.wards,
+        opd:     payload.opd,
+        ot:      payload.ot,
+        alerts:  payload.alerts,
+        monthly: payload.monthly,
+        weekly:  payload.weekly,
+        revenue: payload.revenue,
       });
       setError(null);
-    } catch (e) {
-      // Keep showing mock / previously loaded data on error
-      setError("Could not reach server — showing last known data");
+    } catch (e: unknown) {
+      // Surface the real error instead of silently falling back to fake data.
+      // Keep showing the previous payload if one was loaded earlier.
+      const message =
+        e instanceof Error ? e.message :
+        typeof e === "string" ? e :
+        "Failed to load dashboard data.";
+      setError(message);
     } finally {
       setLoading(false);
     }

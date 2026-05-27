@@ -69,12 +69,20 @@ export function useQueueSocket({
           const data = JSON.parse(ev.data) as QueueEvent;
           setLastEvent(data);
           onEventRef.current?.(data);
-        } catch {
-          // Ignore malformed
+        } catch (e) {
+          // Ignore malformed messages so one bad payload doesn't break
+          // the socket — but log so we can spot a broken backend pushing
+          // non-JSON onto the channel.
+          console.warn("[useQueueSocket] malformed message:", e, ev.data);
         }
       };
 
-      ws.onerror = () => { /* swallow; will reconnect on close */ };
+      ws.onerror = (ev) => {
+        // The browser doesn't expose the actual error here — it's an
+        // opaque Event by spec. Log presence so a recurring error is
+        // visible; onclose handles the reconnect.
+        console.warn("[useQueueSocket] socket error event:", ev);
+      };
 
       ws.onclose = () => {
         setConnected(false);

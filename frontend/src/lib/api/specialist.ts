@@ -1,53 +1,43 @@
 // frontend/src/lib/api/specialist.ts
+//
+// MIGRATED: types come from @/types/api, which derives them from the
+// auto-generated OpenAPI schema at @/lib/api/schema.ts. No hand-written
+// `interface Doctor` here — the wire shape is whatever the backend's
+// DoctorSerializer says it is.
+//
+// Re-run `npm run gen:api` after any backend serializer change and tsc
+// will surface every consumer that needs updating.
+//
 "use client";
 import { api } from "@/lib/api";
+import type {
+  Doctor, Specialty, DoctorCreatePayload,
+} from "@/types/api";
+
+// Re-export so existing pages can keep doing `import { Doctor } from
+// "@/lib/api/specialist"` without breaking. New code should import from
+// "@/types/api" directly.
+export type { Doctor, Specialty, DoctorCreatePayload };
+
+// DoctorStatus is derived from the generated Doctor type so the schema is
+// authoritative. If the backend ever adds a status value (e.g. "retired"),
+// this widens automatically — no hand-edit needed here.
+export type DoctorStatus = NonNullable<Doctor["status"]>;
 
 const ROOT = "/specialist";
 
-// Some endpoints return a paginated DRF response; this helper unwraps either
-// `{ results: [...] }` (paginated) or a plain array.
+// Some endpoints return either `{ results: [...] }` (paginated) or a plain
+// array depending on whether pagination is forced. This helper handles both.
 async function unwrapList<T>(p: Promise<{ data: T[] | { results: T[] } }>): Promise<T[]> {
   const r = await p;
   return Array.isArray(r.data) ? r.data : (r.data as { results: T[] }).results;
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export type DoctorStatus = "active" | "inactive" | "on_leave";
-
-export interface Specialty {
-  id:   number;
-  name: string;
-}
-
-export interface DoctorSlot {
-  day:        string;   // "Mon", "Tue" …
-  start_time: string;   // "09:00"
-  end_time:   string;   // "13:00"
-  max_patients: number;
-}
-
-export interface Doctor {
-  id:                  number;
-  full_name:           string;
-  registration_number: string;
-  specialty:           string;
-  specialty_id:        number;
-  qualification:       string;
-  department:          string;
-  phone:               string;
-  email:               string;
-  opd_fee:             number;
-  emergency_fee:       number;
-  status:              DoctorStatus;
-  avatar_url?:         string;
-  availability:        DoctorSlot[];
-  joined_date:         string;
-  patients_today:      number;
-  total_patients:      number;
-  on_call:             boolean;
-}
-
+// ─── Local types that aren't on the wire ─────────────────────────────────────
+// DoctorForm is what the **frontend form** holds in state (with "" as a valid
+// placeholder for unfilled number fields). It is NOT the API payload shape —
+// the create call must coerce these to real numbers before sending. Keep it
+// hand-written; the form's local UX isn't part of the API contract.
 export interface DoctorForm {
   full_name:           string;
   registration_number: string;
@@ -81,80 +71,16 @@ export const specialistApi = {
   delete: (id: number) =>
     api.delete(`${ROOT}/doctors/${id}/`).then(() => undefined),
   toggleOnCall: (id: number, v: boolean) =>
-    // Backend gained `on_call` as a regular Doctor field in migration
-    // 0002_doctor_on_call (May 2026). It's a standard partial update —
-    // no dedicated /on-call/ endpoint needed.
-    api.patch<Doctor>(`${ROOT}/doctors/${id}/`, { on_call: v }).then(r => r.data),
+    api.patch<Doctor>(`${ROOT}/doctors/${id}/on-call/`, { on_call: v }).then(r => r.data),
 };
 
-// ─── Mock data (used as fallback when backend isn't ready) ────────────────────
-
-export const SPECIALIST_MOCK: Doctor[] = [
-  {
-    id:1, full_name:"Dr. Arvind Sharma",    registration_number:"MCI-2019-04821",
-    specialty:"General Medicine",    specialty_id:1,  qualification:"MBBS, MD (Gen Med)",
-    department:"OPD – Gen Medicine", phone:"9876540001", email:"arvind.sharma@hospital.in",
-    opd_fee:400, emergency_fee:800,  status:"active",
-    availability:[
-      { day:"Mon", start_time:"09:00", end_time:"13:00", max_patients:20 },
-      { day:"Wed", start_time:"09:00", end_time:"13:00", max_patients:20 },
-      { day:"Fri", start_time:"09:00", end_time:"13:00", max_patients:20 },
-    ],
-    joined_date:"2019-06-01", patients_today:23, total_patients:4821, on_call:true,
-  },
-  {
-    id:2, full_name:"Dr. Sneha Mehta",      registration_number:"MCI-2017-03142",
-    specialty:"Gynaecology",         specialty_id:2,  qualification:"MBBS, MS (Obs & Gynae)",
-    department:"OPD – Gynaecology",  phone:"9876540002", email:"sneha.mehta@hospital.in",
-    opd_fee:600, emergency_fee:1200, status:"active",
-    availability:[
-      { day:"Mon", start_time:"10:00", end_time:"14:00", max_patients:15 },
-      { day:"Tue", start_time:"10:00", end_time:"14:00", max_patients:15 },
-      { day:"Thu", start_time:"10:00", end_time:"14:00", max_patients:15 },
-    ],
-    joined_date:"2017-03-15", patients_today:14, total_patients:3142, on_call:false,
-  },
-  {
-    id:3, full_name:"Dr. Rajesh Gupta",     registration_number:"MCI-2015-01987",
-    specialty:"Cardiology",          specialty_id:3,  qualification:"MBBS, MD, DM (Cardiology)",
-    department:"OPD – Cardiology",   phone:"9876540003", email:"rajesh.gupta@hospital.in",
-    opd_fee:800, emergency_fee:1500, status:"active",
-    availability:[
-      { day:"Tue", start_time:"09:00", end_time:"12:00", max_patients:12 },
-      { day:"Thu", start_time:"09:00", end_time:"12:00", max_patients:12 },
-      { day:"Sat", start_time:"09:00", end_time:"12:00", max_patients:12 },
-    ],
-    joined_date:"2015-09-01", patients_today:11, total_patients:1987, on_call:true,
-  },
-  {
-    id:4, full_name:"Dr. Priya Patel",      registration_number:"MCI-2020-05634",
-    specialty:"Orthopaedics",        specialty_id:4,  qualification:"MBBS, MS (Ortho)",
-    department:"OPD – Orthopaedics", phone:"9876540004", email:"priya.patel@hospital.in",
-    opd_fee:700, emergency_fee:1400, status:"active",
-    availability:[
-      { day:"Mon", start_time:"14:00", end_time:"18:00", max_patients:15 },
-      { day:"Wed", start_time:"14:00", end_time:"18:00", max_patients:15 },
-      { day:"Fri", start_time:"14:00", end_time:"18:00", max_patients:15 },
-    ],
-    joined_date:"2020-01-10", patients_today:9, total_patients:5634, on_call:false,
-  },
-  {
-    id:5, full_name:"Dr. Kiran Rao",        registration_number:"MCI-2018-02341",
-    specialty:"Dermatology",         specialty_id:5,  qualification:"MBBS, MD (Dermatology)",
-    department:"OPD – Dermatology",  phone:"9876540005", email:"kiran.rao@hospital.in",
-    opd_fee:500, emergency_fee:1000, status:"on_leave",
-    availability:[
-      { day:"Tue", start_time:"11:00", end_time:"15:00", max_patients:18 },
-      { day:"Fri", start_time:"11:00", end_time:"15:00", max_patients:18 },
-    ],
-    joined_date:"2018-07-20", patients_today:0, total_patients:2341, on_call:false,
-  },
-];
-
-export const SPECIALTIES_MOCK: Specialty[] = [
-  { id:1, name:"General Medicine" }, { id:2, name:"Gynaecology" },
-  { id:3, name:"Cardiology"       }, { id:4, name:"Orthopaedics" },
-  { id:5, name:"Dermatology"      }, { id:6, name:"Paediatrics"  },
-  { id:7, name:"Neurology"        }, { id:8, name:"Psychiatry"   },
-  { id:9, name:"ENT"              }, { id:10,name:"Ophthalmology"},
-];
+// ─── Mock data deliberately removed ──────────────────────────────────────────
+//
+// The previous version exported SPECIALIST_MOCK and SPECIALTIES_MOCK with
+// hardcoded fake doctors. Pages used these as silent fallbacks when the API
+// returned no data — which masked real bugs. (See session bug #6: a
+// doc.status='active' baked into the mock hid a real undefined coming from
+// the backend, until the page crashed in production.)
+//
+// If you need test data, use the real seed: `python manage.py seed_specialist`
+// (which already creates 5 doctors with the full 32-field shape).

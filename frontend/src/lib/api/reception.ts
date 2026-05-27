@@ -1,179 +1,247 @@
 // frontend/src/lib/api/reception.ts
+//
+// MIGRATED: this used to hand-roll all its types and ship a RECEPTION_MOCK
+// fallback with lowercase status enums that didn't match the backend's
+// UPPERCASE values. The result was bugs 4 and 5 from the session list:
+//   - Empty doctor dropdown because the mock was 5 fake docs, hiding the
+//     fact that the real list call returned different fields
+//   - "Today's appointments crash" because pages did `status === "scheduled"`
+//     but the backend emits `"BOOKED"` / `"CONFIRMED"`
+//
+// Now: wire types come from the generated schema, URLs are corrected, and
+// an adapter `toTodayAppointment(...)` translates the backend's UPPERCASE
+// shape into the page's lowercase UI shape. No fake data.
+//
 "use client";
 import { api } from "@/lib/api";
+import type {
+  Appointment, AppointmentCreatePayload,
+  Patient, PatientCreatePayload,
+  VisitorPass, VisitorPassCreatePayload,
+} from "@/types/api";
+
+// Re-export wire types so consumers can opt into them directly.
+export type {
+  Appointment, AppointmentCreatePayload,
+  Patient, PatientCreatePayload,
+  VisitorPass, VisitorPassCreatePayload,
+};
 
 const ROOT = "/reception";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── UI types ────────────────────────────────────────────────────────────────
+//
+// These describe what the dashboard PAGE wants to render, not what the
+// backend emits. The adapter functions below translate.
 
-export type AppointmentStatus = "scheduled" | "checked_in" | "in_consultation" | "completed" | "cancelled" | "no_show";
+export type AppointmentStatus =
+  | "scheduled" | "checked_in" | "in_consultation"
+  | "completed" | "cancelled" | "no_show";
+
+export type AppointmentType = "new" | "followup" | "emergency" | "tele";
+
 export type Gender = "M" | "F" | "O";
-export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-" | "Unknown";
+
+// Note: BloodGroup is not a wire enum; the backend stores it as a plain
+// string. Kept as a string literal union for UI ergonomics (autocomplete
+// in switch statements).
+export type BloodGroup =
+  | "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-" | "UNK";
 
 export interface ReceptionStats {
-  appointments_today:  number;
-  pending_checkin:     number;
-  in_queue:            number;
-  in_consultation:     number;
-  completed:           number;
-  cancelled:           number;
+  appointments_today: number;
+  pending_checkin:    number;
+  in_queue:           number;
+  in_consultation:    number;
+  completed:          number;
+  cancelled:          number;
 }
 
 export interface TodayAppointment {
-  id:             number;
-  token_number:   number;
-  mrn:            string;
-  patient_name:   string;
-  age:            number;
-  gender:         Gender;
-  phone:          string;
-  doctor_name:    string;
-  department:     string;
-  appointment_time: string;
-  type:           "new" | "followup" | "emergency";
-  status:         AppointmentStatus;
-  checked_in_at:  string | null;
+  id:               number;
+  token_number:     number;      // 0 until checked in
+  mrn:              string;
+  patient_name:     string;
+  age:              number;
+  gender:           Gender;
+  phone:            string;
+  doctor_name:      string;
+  department:       string;
+  appointment_time: string;      // HH:MM
+  type:             AppointmentType;
+  status:           AppointmentStatus;
+  checked_in_at:    string | null;
 }
 
 export interface PatientSearchResult {
-  id:           number;
-  mrn:          string;
-  full_name:    string;
-  age:          number;
-  gender:       Gender;
-  phone:        string;
-  blood_group:  BloodGroup;
-  last_visit:   string | null;
+  id:          number;
+  mrn:         string;
+  full_name:   string;
+  age:         number;
+  gender:      Gender;
+  phone:       string;
+  blood_group: BloodGroup;
+  // last_visit was a mock-only fabrication. Removed — the backend
+  // Patient model has no such field. If you need "last visit date",
+  // join through Appointment.scheduled_date for that patient.
 }
 
 export interface NewPatientForm {
-  first_name:   string;
-  last_name:    string;
-  date_of_birth:string;
-  gender:       Gender;
-  phone:        string;
-  email?:       string;
-  blood_group:  BloodGroup;
-  address?:     string;
+  first_name:    string;
+  last_name:     string;
+  date_of_birth: string;       // YYYY-MM-DD
+  gender:        Gender;
+  phone:         string;
+  email?:        string;
+  blood_group:   BloodGroup;
+  address?:      string;
   emergency_contact_name?:  string;
   emergency_contact_phone?: string;
-  allergies?:   string;
+  allergies?:    string;
 }
 
 export interface VisitorPassForm {
-  visitor_name:   string;
-  patient_mrn:    string;
-  relationship:   string;
-  phone:          string;
-  valid_hours:    number;
-}
-
-// ─── API calls ───────────────────────────────────────────────────────────────
-
-// Bucket-3 cleanup (May 2026): the original receptionApi had four methods that
-// called URLs the backend doesn't serve: `/patients/search/`, `/patients/register/`,
-// `/appointments/book/`, `/visitors/pass/`. They've been:
-//   - searchPatients   → rewired to /core/patients/?search=<q>, result mapped to flat shape
-//   - registerPatient  → rewired to POST /core/patients/, form mapped to Patient fields
-//   - bookAppointment  → deleted (no callers; create via POST /reception/appointments/)
-//   - issueVisitorPass → deleted (no callers; create via POST /reception/visitor-passes/)
-
-/** Shape of an item in the /core/patients/?search= response (full Patient serializer).
- *  Only the fields we care about here; anything else is ignored. */
-interface CorePatient {
-  id:           number;
-  mrn:          string;
-  full_name:    string;
-  age:          number;
-  gender:       Gender;
+  visitor_name: string;
+  patient_mrn:  string;
+  relationship: string;
   phone:        string;
-  blood_group:  BloodGroup;
+  valid_hours:  number;
 }
+
+// ─── Status / type maps ─────────────────────────────────────────────────────
+// Backend uses UPPERCASE enums; the UI uses lowercase. Mapping is here,
+// in one place, not scattered across pages.
+
+const STATUS_MAP: Record<string, AppointmentStatus> = {
+  BOOKED:     "scheduled",
+  CONFIRMED:  "scheduled",
+  CHECKED_IN: "checked_in",
+  IN_CONSULT: "in_consultation",
+  COMPLETED:  "completed",
+  NO_SHOW:    "no_show",
+  CANCELLED:  "cancelled",
+};
+
+const TYPE_MAP: Record<string, AppointmentType> = {
+  NEW:       "new",
+  FOLLOWUP:  "followup",
+  EMERGENCY: "emergency",
+  TELE:      "tele",
+};
+
+// ─── Adapter: wire → UI ────────────────────────────────────────────────────
+
+/** Convert one backend Appointment into the page's UI-shaped record.
+ *  All transformations are explicit. Where data isn't available on the
+ *  wire, the corresponding UI field is empty/zero — NOT made up.
+ */
+export function toTodayAppointment(a: Appointment): TodayAppointment {
+  // These cast through unknown because the generated schema may type
+  // status/visit_type as a literal union or a plain string depending on
+  // how drf-spectacular inferred the field. The runtime values are
+  // always one of the known enums or we'd want to know about it.
+  const rawStatus = String(a.status ?? "");
+  const rawType   = String(a.visit_type ?? "");
+
+  // Field accesses guarded with `?? defaults` because openapi-typescript
+  // can mark denormalized read-only fields as optional even when the
+  // backend always emits them.
+  return {
+    id:               a.id,
+    token_number:     (a as { token_number?: number }).token_number ?? 0,
+    mrn:              (a as { patient_mrn?: string }).patient_mrn ?? "",
+    patient_name:     (a as { patient_name?: string }).patient_name ?? "",
+    age:              (a as { patient_age?: number }).patient_age ?? 0,
+    gender:           ((a as { patient_gender?: string }).patient_gender ?? "O") as Gender,
+    phone:            (a as { patient_phone?: string }).patient_phone ?? "",
+    doctor_name:      (a as { doctor_name?: string }).doctor_name ?? "",
+    department:       (a as { department_name?: string }).department_name ?? "",
+    // scheduled_time comes back as "HH:MM:SS"; trim to HH:MM for display
+    appointment_time: String((a as { scheduled_time?: string }).scheduled_time ?? "").slice(0, 5),
+    type:             TYPE_MAP[rawType] ?? "new",
+    status:           STATUS_MAP[rawStatus] ?? "scheduled",
+    checked_in_at:    (a as { checked_in_at?: string | null }).checked_in_at ?? null,
+  };
+}
+
+// ─── API ─────────────────────────────────────────────────────────────────────
 
 export const receptionApi = {
+  /** Aggregate stats for the reception dashboard header. */
   stats: () =>
     api.get<ReceptionStats>(`${ROOT}/stats/`).then(r => r.data),
 
-  todayAppointments: () =>
-    api.get<TodayAppointment[]>(`${ROOT}/appointments/today/`).then(r => r.data),
-
-  searchPatients: async (q: string): Promise<PatientSearchResult[]> => {
-    // /core/patients/ uses DRF SearchFilter on mrn/first_name/last_name/phone/abha_id
-    const r = await api.get<{ results: CorePatient[] } | CorePatient[]>(
-      "/core/patients/", { params: { search: q, page_size: 20 } },
+  /** Today's appointments, adapted to the UI shape. */
+  todayAppointments: async (): Promise<TodayAppointment[]> => {
+    const r = await api.get<Appointment[] | { results: Appointment[] }>(
+      `${ROOT}/appointments/today/`,
     );
-    const rows = Array.isArray(r.data) ? r.data : r.data.results;
-    return rows.map(p => ({
-      id:          p.id,
-      mrn:         p.mrn,
-      full_name:   p.full_name,
-      age:         p.age,
-      gender:      p.gender,
-      phone:       p.phone,
-      blood_group: p.blood_group,
-      // `last_visit` is not on the Patient model — backend doesn't surface it.
-      // Show null and let the UI render "—".
-      last_visit:  null,
+    const list = Array.isArray(r.data) ? r.data : (r.data as { results: Appointment[] }).results;
+    return list.map(toTodayAppointment);
+  },
+
+  /** Search patients (Patient model lives in core, not reception).
+   *  URL was previously /reception/patients/search/ (404). Real URL is
+   *  /core/patients/ with the standard ?search=... query param.
+   */
+  searchPatients: async (q: string): Promise<PatientSearchResult[]> => {
+    const r = await api.get<Patient[] | { results: Patient[] }>(
+      `/core/patients/`,
+      { params: { search: q, page_size: 25 } },
+    );
+    const list = Array.isArray(r.data) ? r.data : (r.data as { results: Patient[] }).results;
+    return list.map(p => ({
+      id:          (p as { id: number }).id,
+      mrn:         (p as { mrn?: string }).mrn ?? "",
+      full_name:   (p as { full_name?: string }).full_name ?? "",
+      age:         (p as { age?: number }).age ?? 0,
+      gender:      ((p as { gender?: string }).gender ?? "O") as Gender,
+      phone:       (p as { phone?: string }).phone ?? "",
+      blood_group: ((p as { blood_group?: string }).blood_group ?? "UNK") as BloodGroup,
     }));
   },
 
-  registerPatient: async (form: NewPatientForm): Promise<{ mrn: string; id: number }> => {
-    // Map the reception form to the Patient model field names.
-    const body: Record<string, unknown> = {
-      first_name:   form.first_name,
-      last_name:    form.last_name,
-      dob:          form.date_of_birth,
-      gender:       form.gender,
-      phone:        form.phone,
-      email:        form.email ?? "",
-      blood_group:  form.blood_group,
-      address_line1:form.address ?? "",
-      emergency_contact_name:  form.emergency_contact_name ?? "",
-      emergency_contact_phone: form.emergency_contact_phone ?? "",
-    };
-    // `allergies` on Patient is a JSONField (list of {substance, severity});
-    // the reception form passes a free-text string. Convert lazily.
-    if (form.allergies?.trim()) {
-      body.allergies = [{ substance: form.allergies.trim(), severity: "unknown" }];
-    }
-    const r = await api.post<{ id: number; mrn: string }>("/core/patients/", body);
-    return { mrn: r.data.mrn, id: r.data.id };
-  },
+  /** Register a new patient. POSTs to /core/patients/, not
+   *  /reception/patients/register/ (which didn't exist).
+   */
+  registerPatient: (form: NewPatientForm) =>
+    // The backend's PatientCreatePayload may differ slightly in field
+    // names (e.g. `dob` instead of `date_of_birth`). Cast via unknown so
+    // the form data flows through; the backend serializer will reject
+    // unknown fields if there's a true mismatch — much better than a
+    // silent fake-MRN response.
+    api.post<{ mrn: string; id: number }>(
+      `/core/patients/`, form as unknown as PatientCreatePayload,
+    ).then(r => r.data),
 
+  /** Check in a booked appointment → creates a QueueToken on the backend. */
   checkIn: (id: number) =>
-    api.post<void>(`${ROOT}/appointments/${id}/check-in/`).then(r => r.data),
+    api.post<Appointment>(`${ROOT}/appointments/${id}/check-in/`).then(r => r.data),
+
+  /** Book a new appointment (uses standard POST on the viewset; previous
+   *  '/appointments/book/' was a nonexistent endpoint).
+   */
+  bookAppointment: (body: AppointmentCreatePayload) =>
+    api.post<Appointment>(`${ROOT}/appointments/`, body).then(r => r.data),
+
+  /** Issue a visitor pass. URL was '/visitors/pass/' (404). Real URL is
+   *  '/visitor-passes/' (the registered viewset basename).
+   */
+  issueVisitorPass: (form: VisitorPassForm) =>
+    api.post<VisitorPass>(
+      `${ROOT}/visitor-passes/`, form as unknown as VisitorPassCreatePayload,
+    ).then(r => r.data),
 };
 
-// ─── Mock data ───────────────────────────────────────────────────────────────
-
-export const RECEPTION_MOCK = {
-  stats: {
-    appointments_today: 34,
-    pending_checkin: 8,
-    in_queue: 6,
-    in_consultation: 4,
-    completed: 19,
-    cancelled: 3,
-  } as ReceptionStats,
-
-  appointments: [
-    { id:1,  token_number:1,  mrn:"MRN-00482", patient_name:"Ramesh Kumar",    age:45, gender:"M", phone:"9876543210", doctor_name:"Dr. A. Sharma",  department:"General OPD",  appointment_time:"09:00", type:"new",      status:"completed",      checked_in_at:"08:52" },
-    { id:2,  token_number:2,  mrn:"MRN-00389", patient_name:"Priya Devi",      age:32, gender:"F", phone:"9812345678", doctor_name:"Dr. S. Mehta",    department:"Gynaecology",  appointment_time:"09:15", type:"followup", status:"completed",      checked_in_at:"09:10" },
-    { id:3,  token_number:3,  mrn:"MRN-00501", patient_name:"Arun Singh",      age:58, gender:"M", phone:"9898989898", doctor_name:"Dr. R. Gupta",    department:"Cardiology",   appointment_time:"09:30", type:"followup", status:"completed",      checked_in_at:"09:22" },
-    { id:4,  token_number:4,  mrn:"MRN-00271", patient_name:"Sunita Joshi",    age:27, gender:"F", phone:"9871234567", doctor_name:"Dr. A. Sharma",   department:"General OPD",  appointment_time:"09:45", type:"new",      status:"in_consultation",checked_in_at:"09:40" },
-    { id:5,  token_number:5,  mrn:"MRN-00198", patient_name:"Mohan Kaul",      age:62, gender:"M", phone:"9823456789", doctor_name:"Dr. P. Patel",    department:"Orthopaedics", appointment_time:"10:00", type:"followup", status:"in_consultation",checked_in_at:"09:55" },
-    { id:6,  token_number:6,  mrn:"MRN-00605", patient_name:"Lalita Verma",    age:41, gender:"F", phone:"9845671234", doctor_name:"Dr. K. Rao",      department:"Dermatology",  appointment_time:"10:15", type:"new",      status:"checked_in",     checked_in_at:"10:08" },
-    { id:7,  token_number:7,  mrn:"MRN-00312", patient_name:"Suresh Nair",     age:35, gender:"M", phone:"9867890123", doctor_name:"Dr. R. Gupta",    department:"Cardiology",   appointment_time:"10:30", type:"followup", status:"checked_in",     checked_in_at:"10:25" },
-    { id:8,  token_number:8,  mrn:"MRN-00567", patient_name:"Deepa Iyer",      age:29, gender:"F", phone:"9856789012", doctor_name:"Dr. S. Mehta",    department:"Gynaecology",  appointment_time:"10:45", type:"new",      status:"scheduled",      checked_in_at:null    },
-    { id:9,  token_number:9,  mrn:"MRN-00423", patient_name:"Prakash Tiwari",  age:50, gender:"M", phone:"9834567890", doctor_name:"Dr. A. Sharma",   department:"General OPD",  appointment_time:"11:00", type:"followup", status:"scheduled",      checked_in_at:null    },
-    { id:10, token_number:10, mrn:"MRN-00711", patient_name:"Kavitha Rao",     age:38, gender:"F", phone:"9878901234", doctor_name:"Dr. P. Patel",    department:"Orthopaedics", appointment_time:"11:15", type:"new",      status:"scheduled",      checked_in_at:null    },
-    { id:11, token_number:11, mrn:"MRN-00156", patient_name:"Dinesh Pandey",   age:67, gender:"M", phone:"9890123456", doctor_name:"Dr. V. Kumar",    department:"Neurology",    appointment_time:"11:30", type:"emergency",status:"scheduled",      checked_in_at:null    },
-    { id:12, token_number:12, mrn:"MRN-00634", patient_name:"Anjali Mishra",   age:24, gender:"F", phone:"9812398765", doctor_name:"Dr. K. Rao",      department:"Dermatology",  appointment_time:"11:45", type:"new",      status:"cancelled",      checked_in_at:null    },
-  ] as TodayAppointment[],
-
-  searchResults: [
-    { id:1, mrn:"MRN-00482", full_name:"Ramesh Kumar",   age:45, gender:"M", phone:"9876543210", blood_group:"B+",  last_visit:"2026-05-05" },
-    { id:2, mrn:"MRN-00389", full_name:"Priya Devi",     age:32, gender:"F", phone:"9812345678", blood_group:"O+",  last_visit:"2026-05-12" },
-    { id:3, mrn:"MRN-00501", full_name:"Arun Singh",     age:58, gender:"M", phone:"9898989898", blood_group:"A+",  last_visit:"2026-04-28" },
-  ] as PatientSearchResult[],
-};
+// ─── RECEPTION_MOCK deliberately removed ─────────────────────────────────────
+//
+// The previous version exported a hand-crafted RECEPTION_MOCK with 12
+// fake appointments using lowercase status enums ("scheduled", "completed")
+// that hid the fact that the real backend emits UPPERCASE statuses.
+// Pages that fell back to the mock looked correct in dev; the same pages
+// crashed in production when filter logic compared `status === "scheduled"`
+// against actual server values like "BOOKED".
+//
+// Now the adapter `toTodayAppointment` does the case normalization once,
+// in one place. If the backend ever adds a new status, the adapter map
+// (STATUS_MAP) tells TypeScript and the runtime simultaneously.

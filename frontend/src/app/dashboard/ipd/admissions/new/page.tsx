@@ -7,20 +7,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { admissionsApi, bedsApi } from "@/lib/api/ipd";
 import { api } from "@/lib/api";
 import type { Bed, AdmissionType } from "@/types/ipd";
+import type { Doctor } from "@/lib/api/specialist";
+import type { Department } from "@/types/api";
 
 interface Patient {
   id: number; mrn: string; full_name: string; phone: string;
   age: number; gender: string;
-}
-
-interface Doctor {
-  id: number;
-  user_full_name: string;
-  registration_number: string;
-}
-
-interface Department {
-  id: number; name: string; code: string;
 }
 
 const TYPES: { v: AdmissionType; label: string; tone: string }[] = [
@@ -80,12 +72,18 @@ export default function NewAdmissionPage() {
   const [doctorId, setDoctorId] = useState<number | "">("");
 
   // Departments
+  // URL note: backend mounts at /api/v1/departments/. The viewset is
+  // registered at "" inside apps/department/urls.py (not at "departments")
+  // to avoid the awkward /departments/departments/ doubling. So from the
+  // api client (whose baseURL is /api/v1) the path is just /departments/.
   const departments = useQuery({
     queryKey: ["departments-active"],
     queryFn: () =>
       api.get<{ results: Department[] }>("/departments/", {
         params: { is_active: true, page_size: 100 },
-      }).then(r => r.data.results).catch(() => []),
+      }).then(r => r.data.results),
+    // No .catch silent fallback — let React Query surface failures so
+    // the empty dropdown isn't mistaken for "there are no departments."
   });
   const [deptId, setDeptId] = useState<number | "">("");
 
@@ -246,7 +244,7 @@ export default function NewAdmissionPage() {
               <option value="">Select a doctor…</option>
               {doctors.data?.map(d => (
                 <option key={d.id} value={d.id}>
-                  Dr. {d.user_full_name} ({d.registration_number})
+                  Dr. {d.full_name} ({d.registration_number})
                 </option>
               ))}
             </select>

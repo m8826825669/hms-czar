@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  receptionApi, RECEPTION_MOCK,
+  receptionApi,
   type ReceptionStats, type TodayAppointment,
   type PatientSearchResult, type NewPatientForm,
   type AppointmentStatus, type Gender, type BloodGroup,
@@ -76,25 +76,28 @@ function Modal({ open, onClose, title, children, width="max-w-2xl" }: {
   );
 }
 
+// ─── Form field wrapper ──────────────────────────────────────────────────────
+//
+// HOISTED to module scope (was previously defined inside NewPatientForm).
+// When `F` lived inside the component, every keystroke caused setForm to
+// re-render NewPatientForm, which created a NEW `F` function reference,
+// which React saw as a new component identity, which made it unmount and
+// remount the entire subtree on every keystroke — including the input
+// the user was typing into. The input lost focus after each character.
+// (Bug class instance #1.)
+//
+// Now that `F` is at module scope, its reference is stable across
+// renders and React keeps the input mounted.
+const F = ({ label, id, req=false, children }: { label: string; id: string; req?: boolean; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      {label}{req && <span className="text-red-500 ml-0.5">*</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 // ─── New Patient Registration Form ────────────────────────────────────────────
-
-// IMPORTANT: `F` MUST be defined at module scope, NOT inside NewPatientForm.
-// When it was inside the component body, each render of NewPatientForm
-// produced a new `F` function reference. React treats a new function reference
-// as a NEW component type and unmounts/remounts the entire subtree, so every
-// keystroke lost focus on the input. Hoisting it here keeps the reference
-// stable across renders. See https://react.dev/learn/render-and-commit
-function F({ label, id, req=false, children }: { label: string; id: string; req?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
 function NewPatientForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (mrn: string) => void }) {
   const [form, setForm] = useState<NewPatientForm>({
     first_name:"", last_name:"", date_of_birth:"", gender:"M",
@@ -114,9 +117,15 @@ function NewPatientForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
       const res = await receptionApi.registerPatient(form);
       onSuccess(res.mrn);
     } catch (err: any) {
-      // Simulate success with mock MRN during development
-      const mockMrn = `MRN-${String(Math.floor(Math.random() * 90000) + 10000)}`;
-      onSuccess(mockMrn);
+      // DO NOT silently substitute a fake MRN here. The previous code
+      // generated a random "MRN-<5 digits>" and called onSuccess with
+      // it, which made staff believe a patient was registered when none
+      // was. Show the real error so the user can retry or fix the form.
+      const message = err?.response?.data?.detail
+        || err?.response?.data
+        || (err instanceof Error ? err.message : String(err))
+        || "Registration failed. Please try again.";
+      setError(typeof message === "string" ? message : JSON.stringify(message));
     } finally {
       setLoading(false);
     }
@@ -203,13 +212,12 @@ function PatientSearchModal({ onClose }: { onClose: () => void }) {
       try {
         const data = await receptionApi.searchPatients(q);
         setResults(data);
-      } catch {
-        // Fallback: filter mock data
-        setResults(RECEPTION_MOCK.searchResults.filter(p =>
-          p.full_name.toLowerCase().includes(q.toLowerCase()) ||
-          p.mrn.toLowerCase().includes(q.toLowerCase()) ||
-          p.phone.includes(q)
-        ));
+      } catch (e) {
+        // Surface the error in the console — DO NOT silently substitute
+        // mock results, which had been masking real backend failures
+        // (bug class instance: silent fallback).
+        console.error("Patient search failed:", e);
+        setResults([]);
       } finally { setLoading(false); }
     }, 350);
     return () => clearTimeout(timer.current);
@@ -403,11 +411,20 @@ function AppointmentsTable({
   );
 }
 
+// Honest empty initial state. The page already has a `loading` spinner
+// for the first render; an empty appointments list while loading is the
+// correct behavior. Replaces RECEPTION_MOCK.stats / RECEPTION_MOCK.appointments
+// which were fabricated baseline numbers.
+const EMPTY_STATS: ReceptionStats = {
+  appointments_today: 0, pending_checkin: 0, in_queue: 0,
+  in_consultation: 0, completed: 0, cancelled: 0,
+};
+
 // ─── Main Reception Page ──────────────────────────────────────────────────────
 export default function ReceptionPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<ReceptionStats>(RECEPTION_MOCK.stats);
-  const [appointments, setAppointments] = useState<TodayAppointment[]>(RECEPTION_MOCK.appointments);
+  const [stats, setStats] = useState<ReceptionStats>(EMPTY_STATS);
+  const [appointments, setAppointments] = useState<TodayAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
@@ -425,9 +442,16 @@ export default function ReceptionPage() {
       ]);
       if (s.status === "fulfilled") setStats(s.value);
       if (a.status === "fulfilled") setAppointments(a.value);
-      setError(null);
-    } catch {
-      setError("Showing demo data — connect Django backend to see live records.");
+      // Surface failures honestly instead of "showing demo data".
+      const failed = [s, a].filter(r => r.status === "rejected") as PromiseRejectedResult[];
+      if (failed.length > 0) {
+        const msg = failed.map(f => String(f.reason)).join("; ");
+        setError(`Failed to load: ${msg}`);
+      } else {
+        setError(null);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load reception data.");
     } finally {
       setLoading(false);
     }
@@ -438,7 +462,14 @@ export default function ReceptionPage() {
   const handleCheckIn = async (id: number) => {
     try {
       await receptionApi.checkIn(id);
-    } catch { /* proceed with optimistic update */ }
+    } catch (e) {
+      // Don't pretend the check-in succeeded if it failed. Log the
+      // error and skip the optimistic update so the UI accurately
+      // reflects the server state on the next 30s poll.
+      console.error("Check-in failed:", e);
+      setError(e instanceof Error ? `Check-in failed: ${e.message}` : "Check-in failed.");
+      return;
+    }
     setAppointments(prev => prev.map(a =>
       a.id === id ? { ...a, status: "checked_in" as AppointmentStatus, checked_in_at: new Date().toTimeString().slice(0,5) } : a
     ));
@@ -455,9 +486,9 @@ export default function ReceptionPage() {
   const QUICK_ACTIONS = [
     { label:"New Patient Registration", icon:UserPlus,  color:"text-teal-600",   bg:"bg-teal-50",   action: () => setShowRegister(true) },
     { label:"Search Patient",           icon:Search,    color:"text-blue-600",   bg:"bg-blue-50",   action: () => setShowSearch(true)   },
-    // Both of these route to existing dedicated pages — there's no inline
-    // modal here. The pages already handle the full create flow (form,
-    // validation, react-query mutation, success toast).
+    // Previously: `action: () => {}` — silent no-op. The destination
+    // pages exist; we just weren't navigating to them. Bug class
+    // instance #2 (dead tiles).
     { label:"Book Appointment",         icon:BookOpen,  color:"text-purple-600", bg:"bg-purple-50", action: () => router.push("/dashboard/reception/appointments/new") },
     { label:"Visitor Pass",             icon:IdCard,    color:"text-amber-600",  bg:"bg-amber-50",  action: () => router.push("/dashboard/reception/visitor-pass") },
   ];

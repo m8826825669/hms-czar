@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  specialistApi, SPECIALIST_MOCK, SPECIALTIES_MOCK,
+  specialistApi,
   type Doctor, type DoctorForm, type DoctorStatus, type Specialty,
 } from "@/lib/api/specialist";
 
@@ -88,6 +88,20 @@ const EMPTY_FORM: DoctorForm = {
   opd_fee:"", emergency_fee:"", status:"active", on_call:false,
 };
 
+// HOISTED from inside DoctorFormModal to module scope to prevent focus
+// loss on each keystroke. (Bug class instance #1, same root cause as
+// the reception form: F-defined-inside-component made a new component
+// identity per render, React unmounted/remounted the subtree on every
+// state update.)
+const F = ({ label, id, req=false, half=true, children }:{label:string;id:string;req?:boolean;half?:boolean;children:React.ReactNode}) => (
+  <div className={cn("space-y-1.5", half ? "" : "col-span-2")}>
+    <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      {label}{req&&<span className="text-red-500 ml-0.5">*</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 function DoctorFormModal({ open, onClose, onSaved, specialties, editing }:{
   open:boolean; onClose:()=>void; onSaved:(d:Doctor)=>void;
   specialties:Specialty[]; editing:Doctor|null;
@@ -147,15 +161,6 @@ function DoctorFormModal({ open, onClose, onSaved, specialties, editing }:{
       onSaved(mock);
     } finally { setLoading(false); }
   };
-
-  const F = ({ label, id, req=false, half=true, children }:{label:string;id:string;req?:boolean;half?:boolean;children:React.ReactNode}) => (
-    <div className={cn("space-y-1.5", half ? "" : "col-span-2")}>
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}{req&&<span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
 
   const sel = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -349,8 +354,8 @@ function DoctorCard({ doc, idx, onEdit, onDelete, onToggleOnCall }:{
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function SpecialistPage() {
-  const [doctors,     setDoctors]     = useState<Doctor[]>(SPECIALIST_MOCK);
-  const [specialties, setSpecialties] = useState<Specialty[]>(SPECIALTIES_MOCK);
+  const [doctors,     setDoctors]     = useState<Doctor[]>([]);
+  const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string|null>(null);
   const [q,           setQ]           = useState("");

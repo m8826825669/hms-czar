@@ -21,7 +21,10 @@ export default function NewDonationPage() {
       try {
         const r = await donorsApi.list({ search: donorQuery });
         setResults(r.slice(0, 8));
-      } catch { setResults([]); }
+      } catch (e) {
+        console.error("Donor search failed:", e);
+        setResults([]);
+      }
     }, 300);
     return () => clearTimeout(handle);
   }, [donorQuery]);

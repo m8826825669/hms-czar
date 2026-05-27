@@ -49,7 +49,9 @@ LOCAL_APPS = [
     "apps.reception",
     "apps.opd",
     "apps.ipd",
-    "apps.ward",
+    # NOTE: apps.ward was deleted (May 2026). Ward functionality is provided by
+    # ipd.Ward (a fully-implemented model used by IPD, dashboard ward-occupancy,
+    # bed-management screens). The empty `apps/ward/` stub was redundant.
     "apps.ot",
     "apps.emr",
     "apps.nursing",
@@ -67,7 +69,10 @@ LOCAL_APPS = [
     "apps.gas_cylinder",
     "apps.internal_comms",
     # HR
-    "apps.staff",
+    # NOTE: apps.staff was deleted (May 2026). Staff/employee management is
+    # provided by hr.Employee (master record: personal/professional details,
+    # contracts, designations, leave, etc.) and accounts.User (the login +
+    # role assignment). The empty `apps/staff/` stub was redundant.
     "apps.payroll",
     "apps.attendance",
     # Security
@@ -79,7 +84,11 @@ LOCAL_APPS = [
     "apps.accounting",
     "apps.public",
     # Cross-cutting
-    "apps.scheduling",
+    # NOTE: apps.scheduling was deleted (May 2026). Scheduling functionality is
+    # covered by: specialist.OPDSlot/OPDSlotException/OnCallRoster (doctor
+    # schedules + leave), attendance.Shift/ShiftRoster (staff shifts), and
+    # ot.SurgeryBooking (OT calendar). The empty `apps/scheduling/` stub was
+    # redundant.
     "apps.reports",
     "apps.department",
     "apps.lab",
@@ -99,6 +108,7 @@ LOCAL_APPS = [
 
     # Phase 4d
     "apps.analytics",
+    "apps.dashboard",
    
 ]
 

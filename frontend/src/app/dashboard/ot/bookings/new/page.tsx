@@ -5,13 +5,10 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { theatresApi, proceduresApi, bookingsApi } from "@/lib/api/ot";
 import { api } from "@/lib/api";
+import type { Doctor } from "@/lib/api/specialist";
 
 interface Patient {
   id: number; mrn: string; first_name: string; last_name: string; phone: string;
-}
-interface Doctor {
-  id: number; user: { username: string; first_name: string; last_name: string };
-  specialization: string;
 }
 
 
@@ -28,8 +25,10 @@ export default function NewSurgeryBookingPage() {
   });
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors"],
-    queryFn: async () =>
-      (await api.get<Doctor[]>("/specialist/doctors/")).data,
+    queryFn: async (): Promise<Doctor[]> => {
+      const r = await api.get<Doctor[] | { results: Doctor[] }>("/specialist/doctors/");
+      return Array.isArray(r.data) ? r.data : (r.data as { results: Doctor[] }).results;
+    },
   });
 
   // Patient search (debounced)
@@ -43,11 +42,15 @@ export default function NewSurgeryBookingPage() {
     }
     const handle = setTimeout(async () => {
       try {
-        const res = await api.get<Patient[]>("/core/patients/", {
+        const r = await api.get<Patient[] | { results: Patient[] }>("/core/patients/", {
           params: { search: patientQuery },
         });
-        setPatientResults(res.data.slice(0, 8));
-      } catch {
+        const list = Array.isArray(r.data) ? r.data : (r.data as { results: Patient[] }).results;
+        setPatientResults(list.slice(0, 8));
+      } catch (e) {
+        // Don't silently swallow — surface so the empty list isn't
+        // mistaken for "no matches".
+        console.error("Patient search failed:", e);
         setPatientResults([]);
       }
     }, 300);
@@ -221,11 +224,20 @@ export default function NewSurgeryBookingPage() {
               className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
             >
               <option value="">— Select —</option>
-              {doctors.map((d) => (
-                <option key={d.id} value={d.id}>
-                  Dr. {d.user.first_name} {d.user.last_name} ({d.specialization})
-                </option>
-              ))}
+              {doctors.map((d) => {
+                // The backend's Doctor serializer emits `full_name` (already
+                // includes the "Dr." prefix) and `specialty_names: string[]`.
+                // It does NOT have `d.user.first_name` or `d.specialization`
+                // — those were a stale local interface that hid the real
+                // shape until this page crashed at runtime.
+                const name = d.full_name ?? "";
+                const spec = (d.specialty_names ?? [])[0] ?? "";
+                return (
+                  <option key={d.id} value={d.id}>
+                    {name}{spec && ` (${spec})`}
+                  </option>
+                );
+              })}
             </select>
           </Field>
 
@@ -240,7 +252,7 @@ export default function NewSurgeryBookingPage() {
               <option value="">— None —</option>
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
-                  Dr. {d.user.first_name} {d.user.last_name}
+                  {d.full_name ?? ""}
                 </option>
               ))}
             </select>

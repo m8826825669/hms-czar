@@ -40,14 +40,12 @@ urlpatterns = [
     path("api/v1/billing/",       include("apps.billing.urls")),
     path("api/v1/public/",        include("apps.public.urls")),
 
-    # Executive dashboard (read-only aggregator)
-    path("api/v1/dashboard/",     include("apps.dashboard.urls")),
-
     # Clinical & departments
     path("api/v1/departments/",   include("apps.department.urls")),
     path("api/v1/pharmacy/",      include("apps.pharmacy.urls")),
     path("api/v1/lab/",           include("apps.lab.urls")),
     path("api/v1/ipd/",           include("apps.ipd.urls")),
+    path("api/v1/nursing/",       include("apps.nursing.urls")),
 
     # Specialised clinical
     path("api/v1/ot/",            include("apps.ot.urls")),
@@ -72,6 +70,11 @@ urlpatterns = [
     path("api/v1/insurance/",     include("apps.insurance.urls")),
     path("api/v1/vaccination/",   include("apps.vaccination.urls")),
     path("api/v1/complaints/",    include("apps.complaints.urls")),
+    path("api/v1/internal-comms/", include("apps.internal_comms.urls")),
+    path("api/v1/accounting/",    include("apps.accounting.urls")),
+    path("api/v1/crisis/",        include("apps.crisis.urls")),
+    path("api/v1/protection/",    include("apps.protection.urls")),
+    path("api/v1/dashboard/",     include("apps.dashboard.urls")),
 
     # MIS / Analytics
     path("api/v1/analytics/",     include("apps.analytics.urls")),

@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { labTestsApi, labOrdersApi } from "@/lib/api/lab";
 import { api } from "@/lib/api";
 import type { TestCatalog, TestCategory, LabOrderPriority } from "@/types/lab";
+import type { Doctor } from "@/lib/api/specialist";
 
 interface Patient {
   id: number;
@@ -15,12 +16,6 @@ interface Patient {
   phone: string;
   age: number;
   gender: string;
-}
-
-interface Doctor {
-  id: number;
-  user_full_name: string;
-  registration_number: string;
 }
 
 const CATEGORIES: { code: TestCategory | "ALL"; label: string }[] = [
@@ -202,7 +197,7 @@ export default function NewLabOrderPage() {
             <option value="">Select a doctor…</option>
             {doctorList.data?.map(d => (
               <option key={d.id} value={d.id}>
-                Dr. {d.user_full_name} ({d.registration_number})
+                Dr. {d.full_name} ({d.registration_number})
               </option>
             ))}
           </select>

@@ -5,14 +5,11 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { requisitionsApi } from "@/lib/api/blood_bank";
 import { api } from "@/lib/api";
+import type { Doctor } from "@/lib/api/specialist";
 
 interface Patient {
   id: number; mrn: string; first_name: string; last_name: string; phone: string;
   blood_group?: string;
-}
-interface Doctor {
-  id: number; user: { username: string; first_name: string; last_name: string };
-  specialization: string;
 }
 
 
@@ -21,8 +18,10 @@ export default function NewRequisitionPage() {
 
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors"],
-    queryFn: async () =>
-      (await api.get<Doctor[]>("/specialist/doctors/")).data,
+    queryFn: async (): Promise<Doctor[]> => {
+      const r = await api.get<Doctor[] | { results: Doctor[] }>("/specialist/doctors/");
+      return Array.isArray(r.data) ? r.data : (r.data as { results: Doctor[] }).results;
+    },
   });
 
   // Patient picker
@@ -33,11 +32,15 @@ export default function NewRequisitionPage() {
     if (!patientQuery || patientQuery.length < 2) { setResults([]); return; }
     const handle = setTimeout(async () => {
       try {
-        const r = await api.get<Patient[]>("/core/patients/", {
+        const r = await api.get<Patient[] | { results: Patient[] }>("/core/patients/", {
           params: { search: patientQuery },
         });
-        setResults(r.data.slice(0, 8));
-      } catch { setResults([]); }
+        const list = Array.isArray(r.data) ? r.data : (r.data as { results: Patient[] }).results;
+        setResults(list.slice(0, 8));
+      } catch (e) {
+        console.error("Patient search failed:", e);
+        setResults([]);
+      }
     }, 300);
     return () => clearTimeout(handle);
   }, [patientQuery]);
@@ -164,11 +167,19 @@ export default function NewRequisitionPage() {
                 onChange={(e) => setRequestedBy(e.target.value ? Number(e.target.value) : "")}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">
           <option value="">— Select —</option>
-          {doctors.map((d) => (
-            <option key={d.id} value={d.id}>
-              Dr. {d.user.first_name} {d.user.last_name} ({d.specialization})
-            </option>
-          ))}
+          {doctors.map((d) => {
+            // Real serializer fields: full_name (includes "Dr." prefix
+            // already) + specialty_names: string[]. The previous stale
+            // local Doctor interface had d.user.first_name / d.specialization
+            // which don't exist on the wire.
+            const name = d.full_name ?? "";
+            const spec = (d.specialty_names ?? [])[0] ?? "";
+            return (
+              <option key={d.id} value={d.id}>
+                {name}{spec && ` (${spec})`}
+              </option>
+            );
+          })}
         </select>
       </Field>
 

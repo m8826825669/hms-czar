@@ -23,6 +23,72 @@ except ImportError:
 
 from .models import Appointment
 
+# ─── Frontend-facing enum maps ────────────────────────────────────────────────
+# The frontend expects lowercase enum values that don't 1:1 match the model's
+# uppercase choices. These two dicts are the canonical translation. Use them
+# anywhere we expose appointment status / visit_type to the wire so the
+# frontend stays in charge of its own ergonomic enum.
+#
+# Model status:    BOOKED, CONFIRMED, CHECKED_IN, IN_CONSULT, COMPLETED, NO_SHOW, CANCELLED
+# Frontend wants:  scheduled, scheduled, checked_in, in_consultation, completed, no_show, cancelled
+APPOINTMENT_STATUS_OUT = {
+    "BOOKED":     "scheduled",
+    "CONFIRMED":  "scheduled",
+    "CHECKED_IN": "checked_in",
+    "IN_CONSULT": "in_consultation",
+    "COMPLETED":  "completed",
+    "NO_SHOW":    "no_show",
+    "CANCELLED":  "cancelled",
+}
+APPOINTMENT_VISIT_TYPE_OUT = {
+    "NEW":       "new",
+    "FOLLOWUP":  "followup",
+    "EMERGENCY": "emergency",
+    "TELE":      "tele",
+}
+
+
+def _serialize_today_appointment(appt):
+    """Build the flat TodayAppointment shape the Reception page expects.
+
+    Lives here (not in serializers.py) because it returns a hand-shaped dict
+    rather than a Model-bound DRF serializer — the frontend's TodayAppointment
+    interface is intentionally flatter than the full Appointment model.
+    """
+    patient = appt.patient
+    doctor = appt.doctor
+    dept = getattr(doctor, "primary_department", None) if doctor else None
+
+    # Token number from linked QueueToken (after check-in), if any
+    token_number = None
+    try:
+        tok = appt.queue_token      # OneToOneField reverse
+        if tok and tok.token_no and "-" in tok.token_no:
+            try:
+                token_number = int(tok.token_no.split("-")[-1])
+            except ValueError:
+                pass
+    except Exception:
+        # queue_token may not exist yet (no check-in done)
+        pass
+
+    return {
+        "id":               appt.id,
+        "token_number":     token_number,
+        "mrn":              patient.mrn if patient else "",
+        "patient_name":     patient.full_name if patient else "",
+        "age":              patient.age if patient else 0,
+        "gender":           patient.gender if patient else "O",
+        "phone":            patient.phone if patient else "",
+        "doctor_name":      doctor.full_name if doctor else "",
+        "department":       dept.name if dept else "",
+        "appointment_time": appt.scheduled_time.strftime("%H:%M") if appt.scheduled_time else "",
+        "type":             APPOINTMENT_VISIT_TYPE_OUT.get(appt.visit_type, "new"),
+        "status":           APPOINTMENT_STATUS_OUT.get(appt.status, "scheduled"),
+        "checked_in_at":    appt.checked_in_at.strftime("%H:%M") if appt.checked_in_at else None,
+    }
+
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -42,11 +108,13 @@ def reception_stats(request):
 
     counts = qs.aggregate(
         appointments_today = Count("id"),
-        pending_checkin    = Count("id", filter=Q(status="scheduled")),
-        in_queue           = Count("id", filter=Q(status="checked_in")),
-        in_consultation    = Count("id", filter=Q(status="in_consultation")),
-        completed          = Count("id", filter=Q(status="completed")),
-        cancelled          = Count("id", filter=Q(status="cancelled")),
+        # Filters use the backend's actual stored enum values (uppercase).
+        # The previous lowercase values silently matched zero rows.
+        pending_checkin    = Count("id", filter=Q(status__in=["BOOKED", "CONFIRMED"])),
+        in_queue           = Count("id", filter=Q(status="CHECKED_IN")),
+        in_consultation    = Count("id", filter=Q(status="IN_CONSULT")),
+        completed          = Count("id", filter=Q(status="COMPLETED")),
+        cancelled          = Count("id", filter=Q(status__in=["CANCELLED", "NO_SHOW"])),
     )
     return Response(counts)
 
@@ -89,13 +157,31 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def today(self, request):
+        """
+        GET /api/v1/reception/appointments/today/
+
+        Returns a flat list shaped for the Reception page's `TodayAppointment`
+        TypeScript interface. Differs from the default ModelSerializer output
+        in three ways:
+          1. Enum values are translated to frontend lowercase (BOOKED → scheduled)
+          2. Fields are flattened (patient.full_name → patient_name etc.)
+          3. token_number is sourced from the linked QueueToken if check-in has
+             happened; null otherwise
+        """
         today = timezone.localdate()
         qs = self.get_queryset().filter(scheduled_date=today)
         if doctor_id := request.query_params.get("doctor"):
             qs = qs.filter(doctor_id=doctor_id)
         if status_param := request.query_params.get("status"):
-            qs = qs.filter(status=status_param)
-        return Response(self.get_serializer(qs, many=True).data)
+            # Accept lowercase from clients and translate back to model values
+            reverse_status = {v: k for k, v in APPOINTMENT_STATUS_OUT.items()}
+            backend_value = reverse_status.get(status_param, status_param)
+            qs = qs.filter(status=backend_value)
+        # Pull related rows eagerly so the serializer below isn't N+1
+        qs = qs.select_related(
+            "patient", "doctor__user", "doctor__primary_department",
+        ).prefetch_related("queue_token")
+        return Response([_serialize_today_appointment(a) for a in qs])
 
     @action(detail=True, methods=["post"], url_path="check-in")
     def check_in(self, request, pk=None):
@@ -148,30 +234,10 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         return Response(AppointmentSerializer(appt).data)
 
 
-# Inside AppointmentViewSet, alongside the existing `today` action:
-
-    @action(detail=False, methods=["get"], url_path="stats")
-    def stats(self, request):
-        """
-        GET /api/v1/reception/stats/
-
-        Returns a snapshot of today's reception counters.
-        """
-        today = timezone.localdate()
-        hospital = getattr(request, "hospital", None)
-        qs = Appointment.objects.filter(scheduled_date=today)
-        if hospital:
-            qs = qs.filter(hospital=hospital)
-
-        counts = qs.aggregate(
-            appointments_today = Count("id"),
-            pending_checkin    = Count("id", filter=Q(status="scheduled")),
-            in_queue           = Count("id", filter=Q(status="checked_in")),
-            in_consultation    = Count("id", filter=Q(status="in_consultation")),
-            completed          = Count("id", filter=Q(status="completed")),
-            cancelled          = Count("id", filter=Q(status="cancelled")),
-        )
-        return Response(counts)
+# NOTE: The duplicate `stats` @action that lived here previously has been
+# removed. It was shadowed by the `reception_stats` function view at the
+# top of this file (URL ordering: path() before include(router.urls)) so
+# it never executed. The function view is now the single source of truth.
 
 class QueueTokenViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = QueueToken.objects.select_related(
